@@ -1,0 +1,133 @@
+STRING/ OUTDIR(132),RIMLOC(132), LUGLOC(132), DISCLOC(132),$
+		 BOLLOC(132), WHLOC(132),NULOC(132), SPLOC(132), $
+		MYDIR(132), RVAR(99,132), TYPE(132), INDIR(132)
+		
+NUMBER/ MX1(12), DIST
+
+MAIN:
+
+	MYDIR = &DLGDIR(3)
+	INDIR = 'J:\CURRENT\DAM\TRACTOR'	
+	
+	XSPAWN/ PROG, MYDIR + 'WIL_ASSEMBLY.EXE', MYDIR, IFERR, XERR:
+	
+	$PRINT/ANS
+
+	FETCH/ TXT, 1, MYDIR + 'BROWSER.txt', IFERR, FERR1:
+	RESET/1
+
+	READ/ 1, IFEND, STEP1:, IFERR, RERR1:, RVAR(1..9)
+
+
+	STEP1:
+
+	TYPE = RVAR(1)
+	
+	RESET/1
+
+
+	STEP2:
+
+		IFTHEN/ RVAR(1) == 'type41'			
+		
+		CALL/ 'main41', MYDIR
+				
+
+		ELSEIF/ RVAR(1) == 'type2'	
+						
+		CALL/ 'WILASSY376', MYDIR
+
+
+		ELSEIF/ RVAR(1) == 'type3'	
+						
+		CALL/ 'WILASSY383', MYDIR
+
+
+		ELSEIF/ RVAR(1) == 'type4'	
+						
+		CALL/ 'WILASSY405', MYDIR
+
+
+		ELSEIF/ RVAR(1) == 'type5'	
+						
+		CALL/ 'WILASSY431', MYDIR
+
+
+		ELSEIF/ RVAR(1) == 'type6'	
+						
+		CALL/ 'WILASSY438', MYDIR
+
+
+		ELSEIF/ RVAR(1) == 'type7'	
+						
+		CALL/ 'WILASSY455', MYDIR
+
+
+		ELSEIF/ RVAR(1) == 'type8'	
+						
+		CALL/ 'WILASSY458', MYDIR
+
+
+		ELSEIF/ RVAR(1) == 'type9'	
+						
+		CALL/ 'WILASSY420', MYDIR
+
+
+		ELSEIF/ RVAR(1) == 'type10'	
+						
+		CALL/ 'WILASSY440', MYDIR
+
+
+		ELSEIF/ RVAR(1) == 'type11'	
+						
+		CALL/ 'WILASSY741', MYDIR
+
+
+		ELSEIF/ RVAR(1) == 'type12'	
+						
+		CALL/ 'WILASSY979', MYDIR
+
+
+		ELSEIF/ RVAR(1) == 'type13'	
+						
+		CALL/ 'WILASSY1198', MYDIR
+
+		ELSEIF/ RVAR(1) == 'type14'	
+						
+		CALL/ 'WILASSY433', MYDIR
+
+	
+		ENDIF
+
+
+DEL:
+
+FDEL/ MYDIR + '\BROWSER.txt', IFERR, DELERR:
+
+CALL/ 'DELTXT1', MYDIR
+
+
+
+jump/end:
+
+
+delERR:
+messg/'UNABLE TO DELETE BROWSER.TXT'
+	
+
+XERR:
+MESSG/ 'EXECUTION ERROR: WIL_ASSEMBLY.exe'
+JUMP/ END:
+
+FERR1:
+MESSG/ 'YOU HAVE NOT SELECTED ANY ONE: EXIT'
+JUMP/ END:
+
+RERR1:
+MESSG/ 'COULD NOT READ: BROWSER.txt'
+JUMP/ END:
+
+
+
+END:
+HALT
