@@ -1,0 +1,94 @@
+'option explicit
+Sub CATMain()
+
+CATIA.DisplayFileAlerts = False
+'Const DeleteReadOnly = True
+
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+
+Set objFile = objFSO.OpenTextFile("C:\Users\mchellachamy\Desktop\new.txt", 1)
+Do While objFile.AtEndOfStream = False
+strLine = objFile.ReadLine
+dim path1 as string
+path1  = Replace(strLine,"_","")
+Loop
+
+
+REM DIM A AS STRING
+REM A = INPUTBOX("OLD NAME","OLD NAME",A)
+
+REM DIM B AS STRING
+REM B = INPUTBOX("NEW NAME","NEW NAME",B)
+
+Dim sel as Selection
+Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+
+Dim i as integer
+i = 1
+
+For i = 1 to sel.Count
+
+set prod1=sel.Item(i).Value
+REM set prod1=sel.FindObject("CATIAProduct")
+
+Dim fullpath as string
+fullpath = prod1.ReferenceProduct.Parent.FullName
+
+REM Dim filename as String
+REM filename = prod1.ReferenceProduct.Parent.Name
+REM filename = Replace(filename,".CATPart","")
+REM filename = Replace(filename,".CATProduct","")
+
+Dim partno as string
+partno = prod1.ReferenceProduct.PartNumber
+
+Dim instname as string
+instname = prod1.name
+
+
+dim typ as integer
+	
+typ = InStr(1,instname,".1",1)
+
+if(typ > 0) then
+
+Set productDocument1 = CATIA.ActiveDocument
+
+Set documents1 = CATIA.Documents
+
+Set partDocument1 = documents1.Item(prod1.ReferenceProduct.Parent.Name)
+
+
+dim path as string
+path = "V:\VW310_ST\3D FINISH\3825_New\28-15D 419645\" + path1
+
+dim saveaspath as string
+
+saveaspath = path + "\" + partno + ".CATPart"
+
+
+REM msgbox(saveaspath)
+
+REM saveaspath = Replace(fullpath,A,B)
+
+
+partDocument1.SaveAs saveaspath
+
+REM Set obj = CreateObject("Scripting.FileSystemObject")
+REM obj.DeleteFile(fullpath)
+REM obj.DeleteFile(fullpath),DeleteReadOnly
+
+end if
+
+Next
+
+CATIA.DisplayFileAlerts = True
+
+End Sub

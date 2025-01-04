@@ -1,0 +1,100 @@
+Language="VBSCRIPT"
+Sub CATMain()
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Set objFile = objFSO.OpenTextFile("C:\Users\mchellachamy\Desktop\Path.txt", 1)
+
+Do While objFile.AtEndOfStream = False
+strLine = objFile.ReadLine
+
+dim path as string
+
+path = Replace(strLine,"""","")
+Set documents1 = CATIA.Documents
+Set drawingDocument1 = documents1.Open(path)
+
+
+Set drawingDocument1 = CATIA.ActiveDocument
+
+Dim path1 as String
+path1 = CATIA.ActiveDocument.Name
+
+dim Acdoc as string
+Acdoc = replace(path1,".CATDrawing","")
+Dim objShell
+Dim strPath
+Set objShell = CreateObject("Wscript.Shell")
+strPath = objShell.SpecialFolders("Desktop")
+dim dir
+DIR = strPath + "\DXF\" + Acdoc
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+  
+exists = objFSO.FolderExists(strPath + "\DXF")
+
+if (exists) then 
+   
+Dim drawingSheets1 As DrawingSheets
+Set drawingSheets1 = drawingDocument1.Sheets
+
+For i = 1 To drawingDocument1.Sheets.Count
+
+Dim drawingSheet1 As DrawingSheet
+
+REM MSGBOX(drawingSheets1.Item(i).Name)
+
+dim sci as integer
+sci = InStr(1,drawingSheets1.Item(i).Name,"SBR",1)
+
+IF(SCI = 0) then
+
+else
+
+'prodall children.Item(i)
+
+'Dim drawingSheet1 As DrawingSheet
+Set drawingSheet1 = drawingSheets1.Item(drawingSheets1.Item(i).Name)
+
+drawingSheet1.Activate 
+
+Set drawingDocument1 = CATIA.ActiveDocument
+
+Acdoc = mid(Acdoc,1,3) + "Y-" + mid(Acdoc,4,len(Acdoc)-3)
+
+DIM dxfnme as string
+dxfnme = strPath + "\DXF\" + Acdoc + "_" + drawingSheets1.Item(i).Name +".dxf"
+
+REM msgbox(Acdoc)
+
+REM dxfnme = mid(dxfnme,1,3) + "-Y-" + mid(dxfnme,4,len(dxfnme)-3)
+
+
+REM drawingDocument1.ExportData strPath + "\DXF\" + Acdoc + "_" + drawingSheets1.Item(i).Name +".dxf","dxf"
+drawingDocument1.ExportData dxfnme ,"dxf"
+
+
+REM "C:\Users\mchellachamy\Desktop\ST-Y-38H_857903______________________A01_SPANNER.dxf", "dxf"
+REM drawingDocument1.ExportData dir + i, "dxf"   
+
+END IF
+
+Next
+
+REM drawingDocument1.ExportData dir, "pdf"
+
+REM else
+
+REM msgbox("Dir not found.")
+REM Set objFolder = objFSO.CreateFolder(strPath + "\pdf")
+   
+REM drawingDocument1.ExportData dir, "pdf"   
+   
+end if
+
+
+drawingDocument1.Close
+
+Loop
+REM objFile.Close
+
+End Sub

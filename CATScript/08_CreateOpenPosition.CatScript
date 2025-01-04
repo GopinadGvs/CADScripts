@@ -1,0 +1,229 @@
+'Program By GopinadhGvs Dt. 23-01-2018
+'To PasteSpecial Selected parts Published bodies in to Selected Part
+
+Sub CATMain()
+
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+Dim objShell
+Dim strPath
+Set objShell = CreateObject("Wscript.Shell")
+strPath = objShell.SpecialFolders("Desktop")
+
+'Set objFSO = CreateObject("Scripting.FileSystemObject")
+REM Set objFile = objFSO.OpenTextFile("C:\Users\vsguddanti\Desktop\Dummy.txt", 1)
+Set objFile = objFSO.OpenTextFile(strPath & "\Dummy.txt", 1)
+
+Do While objFile.AtEndOfStream = False
+strLine = objFile.ReadLine
+
+dim path as string
+
+path  = strLine
+REM path = Replace(strLine,"""","")
+REM Set documents1 = CATIA.Documents
+REM Set drawingDocument1 = documents1.Open(path)
+
+Loop
+
+
+Set objFile1 = objFSO.OpenTextFile(strPath & "\Dummy1.txt", 1)
+
+Do While objFile1.AtEndOfStream = False
+strLine1 = objFile1.ReadLine
+
+dim path1 as string
+
+path1  = strLine1
+REM path = Replace(strLine,"""","")
+REM Set documents1 = CATIA.Documents
+REM Set drawingDocument1 = documents1.Open(path)
+
+Loop
+
+
+
+Set ArrayList = CreateObject("System.Collections.ArrayList") 
+Set ArrayList1 = CreateObject("System.Collections.ArrayList")
+Set ArrayList2 = CreateObject("System.Collections.ArrayList")
+'Set ArrayList3 = CreateObject("System.Collections.ArrayList")
+
+Dim sel as Selection
+Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+
+Dim kk as integer
+kk = 1
+
+For kk = 1 to sel.Count
+
+set prod1=sel.Item(kk).Value
+
+Dim filenmes as String
+filenmes = prod1.ReferenceProduct.Parent.Name
+
+REM Dim product20 As Product
+
+REM product20 = prod1.Parent.Parent.Name
+
+REM 'msgbox(product20.ReferenceProduct.Parent.Product.Name)
+
+ArrayList.Add filenmes
+ArrayList1.Add prod1.Name
+ArrayList2.Add prod1.Parent.Parent.Name
+'ArrayList3.Add prod1.Parent.Product.Name
+
+Next
+
+Set iSel = CATIA.ActiveDocument.Selection
+iSel.Clear
+ReDim sFilter(0)
+sFilter(0) = "Product"
+msgInput = MsgBox("Please select Part to Paste!" & vbLf & vbLf & _
+                           "(If not Add part & Try Again..!)", _
+                           vbOKOnly, "   Hint of Insert   ")
+iStatus = iSel.SelectElement2(sFilter, "Select Part", False)
+
+Set drawingView = iSel.Item(1).Value
+
+Set selection1 = partDoc1.Selection
+
+selection1.Clear 
+
+Dim i as integer
+i = 0
+
+For i = 0 to Arraylist.Count-1
+
+Set documents1 = CATIA.Documents
+
+Set partDocument1 = documents1.Item(Arraylist(i))
+
+Set oBodies = partDocument1.Part.Bodies
+
+
+Dim product1 As Product
+Set product1 = CATIA.ActiveDocument.Product
+
+Dim products1 As Products
+Set products1 = product1.Products
+
+'new is here
+'msgbox(Arraylist2(i))
+'msgbox(Arraylist1(i))
+
+Dim product4 As Product
+Set product4 = products1.Item(path)
+REM Set product4 = products1.Item(Arraylist3(i))
+
+
+Dim products10 As Products
+Set products10 = product4.Products
+
+'new is here
+'msgbox(Arraylist2(i))
+'msgbox(Arraylist1(i))
+
+Dim product40 As Product
+Set product40 = products10.Item(path1)
+
+
+Dim products5 As Products
+Set products5 = product40.Products
+
+'new is here
+
+
+'msgbox(Arraylist2(i))
+'msgbox(Arraylist1(i))
+
+Dim product2 As Product
+Set product2 = products5.Item(Arraylist2(i))
+
+
+Dim products2 As Products
+Set products2 = product2.Products
+
+Dim product3 As Product
+Set product3 = products2.Item(Arraylist1(i))
+
+
+REM Dim product3 As Product
+REM Set product3 = product2.Item(Arraylist1(i))
+
+REM Dim product2 As Product
+REM Set product2 = products1.Item(Arraylist1(i))
+
+Dim j As Integer
+
+On Error Resume Next
+
+For j = 1 to oBodies.Count
+
+Set body1 = oBodies.Item(j)
+
+if((body1.InBooleanOperation = False) AND (body1.Shapes.Count > 0)) then
+
+selection1.Add product3.Publications.Item(oBodies.Item(j).Name).Valuation
+selection1.Copy
+
+end if
+
+Next
+
+'Next
+
+Dim filename1 as String
+filename1 = drawingView.ReferenceProduct.Parent.Name
+
+
+'msgbox(drawingView.ReferenceProduct.Parent.Name)
+'msgbox(drawingView.ReferenceProduct.Parent.Parent.Name)
+
+
+REM Dim product1 As Product
+REM Set product1 = productDocument1.Product
+
+REM Dim products1 As Products
+REM Set products1 = product1.Products
+
+REM Dim product2 As Product
+REM Set product2 = products1.Item(Arraylist2(i))
+
+REM Dim products2 As Products
+REM Set products2 = product2.Products
+
+REM Dim product3 As Product
+REM Set product3 = products2.Item(Arraylist1(i))
+
+REM Dim partDocument2 As Document
+REM Set partDocument2 = documents1.Item("ST-38H_857881_________0000_________A00_GEOEFFENETE_STELLUNG_1.CATPart")
+
+Set partDocument2 = documents1.Item(filename1)
+
+Set part2 = partDocument2.Part
+
+Set bodies2 = part2.Bodies
+
+Set body2 = bodies2.Item("PartBody")
+
+On Error Resume Next
+
+selection1.Add body2
+
+selection1.PasteSpecial ("CATPrtResult")
+
+selection1.Clear
+
+part2.Update 
+
+next
+
+msgbox("Copied Successfully.!!")
+
+End Sub

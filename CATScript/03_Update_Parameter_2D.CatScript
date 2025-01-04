@@ -1,0 +1,77 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Set drawingDocument1 = CATIA.ActiveDocument
+
+Set parameters1 = drawingDocument1.Parameters
+
+'Set strParam1 = parameters1.Item("Fahrzeugteilenummer")
+
+'strParam1.Value = "2G4.809.421"
+'strParam1.Value = "xXx.xxx.xxx"
+
+Set parameters2 = drawingDocument1.Parameters
+
+'Set strParam2 = parameters2.Item("Konstrukionsstand_und_Dokumentenversion")
+
+'strParam2.Value = "--"
+'strParam2.Value = "Kxx"
+
+Set parameters3 = drawingDocument1.Parameters
+
+'Set strParam3 = parameters3.Item("KVS_Datum")
+
+'strParam3.Value = "------"
+'strParam3.Value = "dd.mm.yy"
+
+Set parameters4 = drawingDocument1.Parameters
+
+Set strParam4 = parameters4.Item("Auftraggebende_Abteilung")
+
+strParam4.Value = "PT-A/B"
+'strParam4.Value = "xxxx"
+
+Set parameters5 = drawingDocument1.Parameters
+
+Set strParam5 = parameters5.Item("Name")
+
+strParam5.Value = "Jens Dynatowski"
+
+Set parameters6 = drawingDocument1.Parameters
+
+Set strParam6 = parameters6.Item("Abteilung")
+
+strParam6.Value = "PT-AB/2B"
+
+'Set parameters7 = drawingDocument1.Parameters
+
+'Set strParam7 = parameters7.Item("DESCRIPTION_2")
+
+'strParam7.Value = "F580000030524"
+
+Set parameters8 = drawingDocument1.Parameters
+
+Set strParam8 = parameters8.Item("Telefonnummer")
+
+strParam8.Value = "+49-5361-9-993086"
+
+Set parameters9 = drawingDocument1.Parameters
+
+Set strParam9 = parameters9.Item("Firma")
+
+strParam9.Value = "EBZ-Ravensburg"
+
+Set parameters10 = drawingDocument1.Parameters
+
+Set strParam10 = parameters10.Item("Zeichnungsersteller")
+
+strParam10.Value = "Matthias wegis"
+
+Set parameters11 = drawingDocument1.Parameters
+
+Set strParam11 = parameters11.Item("Telefonnummer_Zeichnungsersteller")
+
+strParam11.Value = "+49(0)751/886-3431"
+
+End Sub
