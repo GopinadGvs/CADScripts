@@ -1,0 +1,176 @@
+Language = "VBSCRIPT"
+
+
+Dim iprods As Integer
+Dim wahl As Integer
+Dim sp As Integer
+Dim creat As Integer
+creat = 0
+wahl = 0
+sp = 0
+Dim prods(5000)
+
+
+Sub prodall(ByVal child)
+    Dim children    As Products
+    Dim i           As Integer
+    
+    If child.Products.Count > 0 Then
+        iprods = iprods + 1
+        Set prods(iprods) = child
+        Set children = child.Products
+        For i = 1 To children.Count
+            prodall children.Item(i)
+        Next
+    Else
+      iprods = iprods + 1
+      Set prods(iprods) = child
+    End If
+
+End Sub
+
+
+Sub CATMain()
+
+    Dim doc                 As Document
+    Dim root                As Product
+    Dim children            As Products
+    Dim i                   As Integer
+	Dim reffeld(5000)       As String
+	
+	ierr1 = 0
+    Set doc = CATIA.ActiveDocument
+    Set root = doc.Product
+    strdir = ""
+    
+    iprods = 0
+    Call prodall(root)
+	
+	
+	strFilePath = "C:\Users\vsguddanti\Desktop\List.csv"
+	
+	On Error Resume Next
+	Set obj = CreateObject("Scripting.FileSystemObject")
+	'obj.DeleteFile(strFilePath)
+	on Error goto 0
+	
+	Set objFSO = CreateObject("Scripting.FileSystemObject")
+	Set objStream = objFSO.OpenTextFile(strFilePath, 8, True, 0)
+	
+
+    'MsgBox "iprods: " & iprods
+
+    For i = 1 To iprods  ' partnamen auf arbeitsfeld speichern	
+
+	
+	REM set prod1=sel.Item(i).Value
+
+
+	Dim filename as String
+	filename = prods(i).ReferenceProduct.Parent.Name
+	
+	
+	dim typ as integer
+	
+	typ = InStr(1,filename,".CATProduct",1)
+	
+	dim sci as integer
+	sci = InStr(1,filename,"0000",1)
+	
+	
+	'msgbox(sci)
+	'msgbox(prods(i).ReferenceProduct.Parent.Name)
+	
+	
+	On Error Resume Next
+	
+	'no Adapter/Open Position/Screws
+	
+	if(sci = 0) then
+	
+	
+	if (typ > 1) then
+	
+	'msgbox("Product")
+	
+	dim fil1 as string
+	
+	fil1 = Replace(filename,".CATProduct","")
+	
+
+	REM Set documents1 = CATIA.Documents
+
+	REM Set productDocument1 = documents1.Item(filename)
+	REM Set product1 = productDocument1.Product
+
+	REM REM Set part1 = partDocument1.Part
+
+	REM REM Set parameters1 = part1.Parameters
+	
+	REM Set product1 = product1.ReferenceProduct
+
+	REM Set parameters1 = product1.Parameters	
+
+	REM Set strParam1 = parameters1.Item(fil1 + "\Stueckliste\Anzahl")
+
+	REM strParam1.Value = "1"
+
+	REM Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Anzahl_spiegelbildlich")
+
+	REM strParam1.Value = "1"	
+
+	objStream.WriteLine (prods(i).ReferenceProduct.PartNumber)	
+	
+	
+	else	
+	
+	REM dim nc as integer
+	REM nc = InStr(1,filename,"DRUCKSTUECK",1)
+	
+	REM dim nc1 as integer
+	REM nc1 = InStr(1,filename,"AUFLAGE",1)
+	
+	REM dim nc2 as integer
+	REM nc2 = InStr(1,filename,"AUFNAHMESTIFT",1)
+	
+	REM if (nc2 > 1) then		
+	
+	REM objStream.WriteLine (prods(i).ReferenceProduct.PartNumber)	
+	
+	REM end if
+	
+	
+	REM if (nc > 1) then		
+	
+	REM objStream.WriteLine (prods(i).ReferenceProduct.PartNumber)	
+	
+	REM end if
+	
+	REM if (nc1 > 1) then		
+	
+	REM objStream.WriteLine (prods(i).ReferenceProduct.PartNumber)	
+	
+	REM end if
+	
+	end if	
+	
+	'no Adapter/Open Position/Screws
+	end if	
+	
+	On Error Goto 0
+	
+	'objStream.WriteLine (prods(i).ReferenceProduct.PartNumber)	
+    'reffeld(i) = prods(i).ReferenceProduct.PartNumber
+	'msgbox reffeld(i)
+		
+    Next
+	
+	dim WshShell
+	set WshShell = CreateObject("WScript.Shell")
+	REM dim strPath as string
+	REM strPath = "explorer.exe /select," & strFilePath
+	REM strPath = "explorer.exe /select," & strFilePath
+	REM WshShell.Run strPath
+	WshShell.Run strFilePath
+	
+End Sub

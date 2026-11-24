@@ -1,0 +1,21 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Dim partDocument1 As Document
+Set partDocument1 = CATIA.ActiveDocument
+
+Dim part1 As Part
+Set part1 = partDocument1.Part
+
+Dim relations1 As Relations
+Set relations1 = part1.Relations
+
+Dim formula1 As Relation
+Set formula1 = relations1.Item("Formula.16")
+
+formula1.Modify "ToString(t /1mm)"
+
+formula1.Rename "Formula.16"
+
+End Sub

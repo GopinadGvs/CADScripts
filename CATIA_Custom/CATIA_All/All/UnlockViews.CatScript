@@ -1,0 +1,28 @@
+Sub CATMain()
+Set drawingDocument1 = CATIA.ActiveDocument
+Set Sheets = drawingDocument1.Sheets
+Set activeSheet = Sheets.ActiveSheet
+Set views = activeSheet.Views
+Dim sSel As Selection
+Set sSel = drawingDocument1.Selection
+sSel.Search "CATDrwSearch.DrwView,all"
+
+For i = 1 To sSel.Count
+
+'If sSel.Count = 0 Then 
+'MsgBox "Select one view!"
+'Exit Sub
+
+
+'If TypeName(sSel.Item(i).Value) <> "DrawingView" Then 
+'MsgBox "Selected element is not a drawing view! Select a drawing view."
+'Exit Sub
+
+
+Dim drawView As DrawingView
+Set drawView = sSel.Item(i).Value
+drawView.LockStatus = False
+
+Next
+
+End Sub

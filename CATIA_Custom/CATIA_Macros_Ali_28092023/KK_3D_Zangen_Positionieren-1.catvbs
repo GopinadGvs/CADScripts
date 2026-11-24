@@ -1,0 +1,121 @@
+'Positionierung Schweisszangen,
+' strukturaufbau: ZSB, Achsencatpart,Zangenprodukt mit axhsencatpart
+'Auswahl: 1. Achse derZange ( nur 1. erlaubt 9
+'         2. Aller erforderlichen Achsen im Achsencatpart
+' Makro erstellt automatisch die Zangenkopien und Positioniert diese an den entsprechenden Achsen
+'Script erstellt von Klaus Reichle 160824'
+
+Private oAxis
+Private oPart
+Private oPart_1
+Private oPart_2
+Private oPart_3
+Private oPart_4
+
+
+'====================================================================================
+Sub CATMain()
+'====================================================================================
+On Error Resume Next
+'Dim test As String
+'Dim oActiveDoc As DOCUMENT
+Set oActiveDoc = CATIA.ActiveDocument
+
+ 
+'*********Selektion
+Set selection1 = oActiveDoc.Selection
+ReDim InputObjectType(0)
+Dim SelectedAxis(1000)
+SelectedAxisCount = 0
+' Selection beginn
+
+'********Toolbox zum selectieren der 1. Zangenachse ( im ZangenProdukt )
+
+ InputObjectType(0) = "AxisSystem"
+ status = selection1.SelectElement3(InputObjectType, "nur 1.Zangen Achse Selectieren", True, CATMultiSelTriggWhenUserValidatesSelection, False)
+ If (status = "Cancel") Then Exit Sub
+ 
+'********selektierte Achsen zur selektion addieren
+     Set SelectedAxis(AxisIndex) = selection1.Item2(AxisIndex + 1).Value: SelectedAxisCount = SelectedAxisCount + 1
+'********** Selection Ende
+'For AxisIndex = 0 To SelectedAxisCount - 1
+     Set CurrentAxis = SelectedAxis(AxisIndex)
+     
+    
+            'Dim sAxisName As String
+            sAxisName = CurrentAxis.Name
+            oPart = CurrentAxis.Parent.Parent.Name
+            oPart_1 = Left(oActiveDoc.Name, InStrRev(oActiveDoc.Name, ".") - 1)
+            oPart_2 = Left(oActiveDoc.PRODUCT.Products.Item(2).Name, InStrRev(oActiveDoc.PRODUCT.Products.Item(2).Name, ".") - 1)
+
+'Next
+selection1.Clear
+
+'********Toolbox zum selectieren der Positionierachsen ( Multiselect) mit Strg
+
+ InputObjectType(0) = "AxisSystem"
+ status = selection1.SelectElement3(InputObjectType, "neue Positions Achsen Selectieren", True, CATMultiSelTriggWhenUserValidatesSelection, False)
+ If (status = "Cancel") Then Exit Sub
+ 
+ 
+
+'********selektierte Achsen zur selektion addieren
+
+        'folderinput_1 = oActiveDoc.Path + "\" + oActiveDoc.PRODUCT.Products.Item(2).PartNumber + ".CATProduct"
+    folderinput_1 = oActiveDoc.Path + "\" + oPart_2 + ".CATProduct"
+
+ For AxisIndex1 = 0 To selection1.Count2 - 1
+
+     Set SelectedAxis(AxisIndex1) = selection1.Item2(AxisIndex1 + 1).Value: SelectedAxisCount = SelectedAxisCount + 1
+ 
+ 
+        'Set product1 = oActiveDoc.PRODUCT
+        'Set products1 = product1.Products
+        Dim arrayOfVariantOfBSTR1(0)
+        arrayOfVariantOfBSTR1(0) = folderinput_1
+        'arrayOfVariantOfBSTR1(0) = "K:\16037102_VOLVO_V431_BS\02\05\Welding_points_from_qt_swiss\180823_VCCH_157020_overview\v13_7669_000f_gun.CATProduct"
+        'products1.AddComponentsFromFiles arrayOfVariantOfBSTR1, "All"
+        oActiveDoc.PRODUCT.Products.AddComponentsFromFiles arrayOfVariantOfBSTR1, "All"
+        product1.Update
+ Next
+'********** Selection Ende
+
+'********** Bearbeitung der Achsen begin
+'selectierte Punkte verarbeiten
+        For AxisIndex1 = 0 To SelectedAxisCount - 1
+            Set CurrentAxis = SelectedAxis(AxisIndex1)
+            'MsgBox CurrentAxis.Name
+    
+           ' Dim sAxisName As String
+            sAxisName_1 = CurrentAxis.Name
+            oPart_3 = CurrentAxis.Parent.Parent.Name 'LeafProduct.name
+            oPart_4 = Left(oActiveDoc.Name, InStrRev(oActiveDoc.Name, ".") - 1)
+                'MsgBox " " & sAxisName & "  Das ist die Ausgabe "
+            Axis_1 = oPart_4 + "/" + oPart_3 + ".1/!" + oPart + "/" + sAxisName_1
+            test = AxisIndex1 + 1
+            
+
+            'Axis_2 = oPart_1 + "/" + oPart_2 + "." + test + "/" + oPart + ".1/!" + oPart + "/" + sAxisName
+	     Axis_2 = "" & oPart_1 & "" + "/" + "" & oPart_2 & "" + "." + "" & test & "" + "/" +"" & oPart & "" + ".1/!" + "" & oPart & "" + "/" + "" & sAxisName & ""
+
+ 
+         
+            Set productDocument1 = CATIA.ActiveDocument
+            Set product1 = productDocument1.PRODUCT
+            Set constraints1 = product1.Connections("CATIAConstraints")
+
+'Set reference1 = product1.CreateReferenceFromName("157010R02_REAR_QUARTER_RH_RESPOT_Part2_ENVIRONMENT/v13_7669_000f_gun.1/axis_gun_7669.1/!axis_gun_7669/Absolute Axis System")
+            Set reference1 = product1.CreateReferenceFromName(Axis_2)
+'Set reference2 = product1.CreateReferenceFromName("157010R02_REAR_QUARTER_RH_RESPOT_Part2_ENVIRONMENT/157010R02_Rear_QuarterRH_RESPOT_Part2.1/!157010R02_Rear_QuarterRH_RESPOT_Part2/C610wp8726")
+            Set reference2 = product1.CreateReferenceFromName(Axis_1)
+            Set constraint1 = constraints1.AddBiEltCst(catCstTypeOn, reference1, reference2)
+            product1.Update
+
+        Next
+ Selection.Clear
+End Sub '/////////////////////////////////////////////////////////// CATMain
+
+ 
+
+
+

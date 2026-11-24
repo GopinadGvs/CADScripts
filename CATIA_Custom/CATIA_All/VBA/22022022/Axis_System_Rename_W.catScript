@@ -1,0 +1,38 @@
+'Program By GopinadhGvs Dt. 29-09-2021
+'To Rename Selected Axis_Systems
+
+Sub CATMain()
+
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+Set ArrayList = CreateObject("System.Collections.ArrayList") 
+Set ArrayList1 = CreateObject("System.Collections.ArrayList") 
+
+Dim sel as Selection
+
+Dim axis as AxisSystems
+Dim axis1 as AxisSystem
+set sel=CATIA.ActiveDocument.Selection
+
+'Msgbox(sel.Count)
+
+Dim kk as integer
+kk = 1
+
+val = "6138"
+
+For kk = 1 to sel.Count
+
+sel.Item(kk).Value.Name = "Axis_" & kk & "_P" & "8006"
+'sel.Item(kk).Value.Name = "Axis_" & "1" & "_P" & val
+
+val = val + 1
+
+Next
+
+End Sub

@@ -1,0 +1,59 @@
+Sub CATMain(viewa as drawingview, viewb as drawingview, viewc as drawingview)
+
+on error resume next
+
+Dim d1 As DrawingDocument
+
+Set d1 = CATIA.ActiveDocument
+
+Dim sheets As DrawingSheets
+
+Set sheets = d1.sheets
+
+Dim s1 As DrawingSheet
+
+Set s1 = sheets.ActiveSheet
+
+Dim v As DrawingViews
+
+Set v = s1.Views
+
+Dim v1 As DrawingView
+
+Set v1 = v.ActiveView
+
+Dim texts As DrawingTexts
+
+Set texts = v1.texts
+
+Dim gele As GeometricElements
+
+Set gele = v1.GeometricElements
+
+Dim t As DrawingDimensions
+
+Set t = v1.Dimensions
+
+Dim t1 As DrawingDimension
+
+Dim ax As AxisSystems
+
+Dim pa As Product
+
+Dim view1 As DrawingView
+
+viewa.ReferenceView = v1
+
+viewb.ReferenceView = v1
+
+viewc.ReferenceView = v1
+
+viewa.AlignedWithReferenceView
+
+viewb.AlignedWithReferenceView
+
+viewc.AlignedWithReferenceView
+
+v1.activate
+
+End Sub

@@ -1,0 +1,72 @@
+'Program to add Item number to catpart or product from filename
+'By G V S GOPINADH Dt.07-10-2022
+'option explicit
+Sub CATMain()
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+Dim sel as Selection
+Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+
+Dim i as integer
+i = 1
+
+For i = 1 to sel.Count
+
+set prod1=sel.Item(i).Value
+
+Dim filename as String
+filename = prod1.ReferenceProduct.Parent.Name
+
+dim typ as integer
+
+typ = InStr(1,filename,".CATProduct",1)
+
+if(typ>1) then
+
+dim fil1 as string
+
+fil1 = Replace(filename,".CATProduct","")
+
+Set documents1 = CATIA.Documents
+
+Set productDocument1 = documents1.Item(filename)
+Dim product1 As Product
+Set product1 = productDocument1.Product
+
+Set product1 = product1.ReferenceProduct
+
+Dim parameters1 As Parameters
+Set parameters1 = product1.Parameters
+
+Dim strParam1 As Parameter
+Set strParam1 = parameters1.Item(fil1 +"\Properties\Itemnumber")
+strParam1.Value = Left(fil1,len(fil1)-6)
+
+else
+
+fil1 = Replace(filename,".CATPart","")
+
+Set documents1 = CATIA.Documents
+
+Set partDocument1 = documents1.Item(filename)
+
+Set part1 = partDocument1.Part
+
+Dim parameters2 As Parameters
+Set parameters2 = part1.Parameters
+
+Dim strParam2 As Parameter
+Set strParam2 = parameters2.Item(fil1 +"\Properties\Itemnumber")
+strParam2.Value = Left(fil1,len(fil1)-6)
+
+end if
+
+Next
+
+End Sub

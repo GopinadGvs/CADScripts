@@ -1,0 +1,100 @@
+' COPYRIGHT    2003
+Option Explicit
+
+' ***********************************************************************
+'   Purpose     : Makro zum Spiegen von Bauteilen oder Baugrupen  an einer Fahrzeug-Ebene
+'   Assumptions : a Document/Componenent should be selected.
+'   Author      : 
+'   Languages   : VBScript
+'   Locales     : English 
+'   CATIA Level : V5R10SP3
+' ***********************************************************************
+'===========================================================
+'  Makro zum Spiegen von Bauteilen oder Baugrupen  an einer Fahrzeug-Ebene
+'===========================================================
+' Vorgehensweise :
+' 1) zu spiegelnde Produkt oder Part im Strukturbaum markieren
+' 2) Tools/Macro/Macros (Alt+F8) 
+' 3) Mirror_an_ZX.CATScript  selektieren und  RUN druecken
+' => Spiegelung an der ZX-Ebene wird durchgefuehrt 
+
+' Bemerkung:     !!!  FUNKTIONIERT IN VERBINDUNG MIT VPM/PRISMA !!!
+' Beim Ausfuehren des Skriptes wird keine Kopie des gespiegelten Part/Produkt erstellt. 
+' Es muss das Part/Produkt also 2 mal eingefuegt werden (COPY/PASTE in V5 oder im PSN) 
+' und eines davon wird dann ueber das Skript gespiegelt.
+' 
+Sub CATMain()
+
+Dim sel as Selection
+Dim prod1 as AnyObject
+Dim Matrix(11)
+
+set sel=CATIA.ActiveDocument.Selection
+set prod1=sel.FindObject("CATIAProduct")
+
+    'Acquire the direction of the section
+    Dim sDirection As String
+    sDirection = "xz" 'Default value
+    sDirection = InputBox("An welcher Ebene soll gespiegelt werden? Ebene: xz, yz oder xy ?", "Direction of Sections ?", sDirection)
+    If (sDirection <> "") Then
+       Dim dDirection As String
+       dDirection = sDirection
+    End If
+
+If (dDirection = "xz") Then
+
+Matrix(0) =1.0 
+Matrix(1) = 0.0 
+Matrix(2) = 0.0 
+
+Matrix(3) = 0.0 
+Matrix(4) =- 1.0 
+Matrix(5) = 0.0 
+
+Matrix(6) = 0.0 
+Matrix(7) = 0.0 
+Matrix(8) = 1.0 
+
+Matrix(9) = 0.0 
+Matrix(10) = 0.0 
+Matrix(11) = 0.0
+
+End If
+
+If (dDirection = "yz") Then
+
+Matrix(0) =- 1.0 
+Matrix(1) = 0.0 
+Matrix(2) = 0.0 
+
+Matrix(3) = 0.0 
+Matrix(4) = 1.0 
+Matrix(5) = 0.0 
+
+Matrix(6) = 0.0 
+Matrix(7) = 0.0 
+Matrix(8) = 1.0 
+
+Matrix(9) = 0.0 
+Matrix(10) = 0.0 
+Matrix(11) = 0.0
+End If
+
+If (dDirection = "xy") Then
+Matrix(0) =1.0 
+Matrix(1) = 0.0 
+Matrix(2) = 0.0 
+Matrix(3) = 0.0 
+Matrix(4) = 1.0 
+Matrix(5) = 0.0 
+Matrix(6) = 0.0 
+Matrix(7) = 0.0 
+Matrix(8) = -1.0 
+Matrix(9) = 0.0 
+Matrix(10) = 0.0 
+Matrix(11) = 0.0
+End If
+
+prod1.Move.Apply Matrix
+
+End Sub

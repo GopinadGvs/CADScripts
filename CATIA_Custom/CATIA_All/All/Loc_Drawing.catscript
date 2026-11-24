@@ -1,0 +1,15 @@
+option explicit
+Sub CATMain()
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+Dim path as String
+path = CATIA.ActiveDocument.FullName
+dim strPath as string
+strPath = "explorer.exe /select," & path
+WshShell.Run strPath
+
+End Sub

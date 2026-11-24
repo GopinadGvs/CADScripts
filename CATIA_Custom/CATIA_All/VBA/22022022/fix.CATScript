@@ -1,0 +1,40 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Dim productDocument1 As Document
+Set productDocument1 = CATIA.ActiveDocument
+
+Dim product1 As Product
+Set product1 = productDocument1.Product
+
+Dim constraints1 As Collection
+Set constraints1 = product1.Connections("CATIAConstraints")
+
+Dim constraint1 As Constraint
+Set constraint1 = constraints1.Item("Fix.636")
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+Set constraint1 = constraints1.Item("Fix.637")
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+Set constraint1 = constraints1.Item("Fix.638")
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+Set constraint1 = constraints1.Item("Fix.639")
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+Set constraint1 = constraints1.Item("Fix.640")
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+Set constraint1 = constraints1.Item("Fix.641")
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+Set constraint1 = constraints1.Item("Fix.642")
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+Set constraint1 = constraints1.Item("Fix.643")
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+Set constraint1 = constraints1.Item("Fix.644")
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+Set constraint1 = constraints1.Item("Fix.647")
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+Set constraint1 = constraints1.Item("Fix.648")
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+Set constraint1 = constraints1.Item("Fix.649")
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+
+End Sub

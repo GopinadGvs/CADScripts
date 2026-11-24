@@ -1,0 +1,317 @@
+'Program By GopinadhGvs Dt. 22-12-2017
+'To get predefined product parameters to Excel Sheet
+Language = "VBSCRIPT"
+
+
+Dim iprods As Integer
+Dim wahl As Integer
+Dim sp As Integer
+Dim creat As Integer
+creat = 0
+wahl = 0
+sp = 0
+Dim prods(5000)
+
+
+Sub prodall(ByVal child)
+    Dim children    As Products
+    Dim i           As Integer
+    
+    If child.Products.Count > 0 Then
+        iprods = iprods + 1
+        Set prods(iprods) = child
+        Set children = child.Products
+        For i = 1 To children.Count
+            prodall children.Item(i)
+        Next
+    Else
+      iprods = iprods + 1
+      Set prods(iprods) = child
+    End If
+
+End Sub
+
+
+Sub CATMain()
+
+    Dim doc                 As Document
+    Dim root                As Product
+    Dim children            As Products
+    Dim i                   As Integer
+	Dim reffeld(5000)       As String
+	
+	ierr1 = 0
+    Set doc = CATIA.ActiveDocument
+    Set root = doc.Product
+    strdir = ""
+    
+    iprods = 0
+    Call prodall(root)
+	
+	
+	Dim objShell
+	Dim strPath
+	Set objShell = CreateObject("Wscript.Shell")
+	strPath = objShell.SpecialFolders("Desktop")
+	
+	
+	strFilePath = strPath & "\Nomenclature.csv"
+	
+	On Error Resume Next
+	Set obj = CreateObject("Scripting.FileSystemObject")
+	obj.DeleteFile(strFilePath)
+	on Error goto 0
+	
+	Set objFSO = CreateObject("Scripting.FileSystemObject")
+	Set objStream = objFSO.OpenTextFile(strFilePath, 8, True, 0)
+	objStream.WriteLine("Part,Nomenclature")
+	'objStream.WriteLine("Part,Anzal,Spiegelbild,Position,Produkt,Werkstoff,Spiegelbildlich")
+	
+
+    'MsgBox "iprods: " & iprods
+
+    For i = 1 To iprods  ' partnamen auf arbeitsfeld speichern	
+
+	
+	REM set prod1=sel.Item(i).Value
+
+
+	Dim filename as String
+	filename = prods(i).ReferenceProduct.Parent.Name
+	
+	
+	dim typ as integer
+	
+	typ = InStr(1,filename,".CATProduct",1)
+	
+	REM dim sci as integer
+	REM sci = InStr(1,filename,"0000",1)
+	
+	
+	'msgbox(sci)
+	'msgbox(prods(i).ReferenceProduct.Parent.Name)
+	
+	
+	On Error Resume Next
+	
+	'no Adapter/Open Position/Screws
+	
+	REM if(sci = 0) then
+	
+	
+	if (typ > 1) then
+	
+	'msgbox("Product")
+	
+	dim fil1 as string
+	
+	fil1 = Replace(filename,".CATProduct","")
+	
+
+	Set documents1 = CATIA.Documents
+
+	Set productDocument1 = documents1.Item(filename)
+	Set product1 = productDocument1.Product	
+	
+	Set product1 = product1.ReferenceProduct
+
+	Set parameters1 = product1.Parameters	
+
+	'_____
+	
+	
+	dim xcel as string
+	xcel = ""
+
+	Set strParam1 = parameters1.Item(fil1 + "\Stueckliste\Anzahl")
+
+	REM msgbox  "Anzahl " & strParam1.Value
+	xcel =  strParam1.Value
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Anzahl_spiegelbildlich")
+
+	REM msgbox  "Anzahl_spiegelbildlich " & strParam1.Value
+	xcel = xcel & ","  & strParam1.Value
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Positionsnummer")
+
+	REM msgbox  "Positionsnummer " & strParam1.Value
+	xcel =  xcel & "," & strParam1.Value
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Produktbezeichnung")
+
+	REM msgbox  "Produktbezeichnung " & strParam1.Value
+	xcel =   xcel & "," & strParam1.Value
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Werkstoff_Benennung")
+
+	REM msgbox  "Werkstoff_Benennung " & strParam1.Value
+	xcel = xcel & "," & strParam1.Value
+	
+	Set strParam1 = parameters1.Item(fil1 +"\Spiegelbildlich")
+
+	REM msgbox  "Werkstoff_Benennung " & strParam1.Value
+	xcel = xcel & "," & strParam1.Value
+	
+	'____________________
+	
+	Set oBodies = partDocument1.Part.Bodies
+	Dim j As Integer
+	For j = 1 to oBodies.Count
+	if oBodies.Item(j).Name = "PartBody" then
+	Dim oPartBody As AnyObject
+	Set oPartBody = partDocument1.Part.Bodies.Item("Funktionsteil")
+	Dim oShapes As Shapes
+	Set oShapes = oPartBody.Shapes
+	if (oShapes.Count <> 0) then
+	Dim Pad2 As AnyObject
+	On Error Resume Next
+	Set Pad2 = oPartBody.Shapes.Item(1)
+	xcel = xcel & "," & Pad2.Name
+	'msgbox(Pad2.Name)
+	
+	else
+	'msgbox "no shapes"
+	end if
+	end if
+	next
+
+On Error goto 0
+	
+	
+	
+	
+
+	REM msgbox(fil1 & "," & xcel)
+	objStream.WriteLine(prods(i).Name & "," & xcel)
+	
+	'msgbox(prods(i).Name)
+	
+	xcel = ""
+	
+	
+
+	REM objStream.WriteLine (prods(i).ReferenceProduct.PartNumber)	
+	
+	
+	else	
+	
+	
+	fil1 = Replace(filename,".CATPart","")	
+
+	Set documents1 = CATIA.Documents
+
+	Set partDocument1 = documents1.Item(filename)
+
+	Set part1 = partDocument1.Part
+
+	Set parameters1 = part1.Parameters
+
+	'___________________
+	
+	'dim xcel as string
+
+	Set strParam1 = parameters1.Item(fil1 + "\Stueckliste\Anzahl")
+
+	REM msgbox  "Anzahl " & strParam1.Value
+	xcel =  strParam1.Value
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Anzahl_spiegelbildlich")
+
+	REM msgbox  "Anzahl_spiegelbildlich " & strParam1.Value
+	xcel = xcel & ","  & strParam1.Value
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Positionsnummer")
+
+	REM msgbox  "Positionsnummer " & strParam1.Value
+	xcel =  xcel & "," & strParam1.Value
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Produktbezeichnung")
+
+	REM msgbox  "Produktbezeichnung " & strParam1.Value
+	xcel =   xcel & "," & strParam1.Value
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Werkstoff_Benennung")
+
+	REM msgbox  "Werkstoff_Benennung " & strParam1.Value
+	xcel = xcel & "," & strParam1.Value
+	
+	Set strParam1 = parameters1.Item(fil1 +"\Spiegelbildlich")
+
+	REM msgbox  "Werkstoff_Benennung " & strParam1.Value
+	xcel = xcel & "," & strParam1.Value
+	
+	
+	Set oBodies = partDocument1.Part.Bodies
+	'Dim j As Integer
+	For j = 1 to oBodies.Count
+	if oBodies.Item(j).Name = "PartBody" then
+	'Dim oPartBody As AnyObject
+	Set oPartBody = partDocument1.Part.Bodies.Item("Funktionsteil")
+	'Dim oShapes As Shapes
+	Set oShapes = oPartBody.Shapes
+	if (oShapes.Count <> 0) then
+	'Dim Pad2 As AnyObject
+	On Error Resume Next
+	Set Pad2 = oPartBody.Shapes.Item(1)
+	xcel = xcel & "," & Pad2.Name
+	'msgbox(Pad2.Name)
+	On Error goto 0
+	else
+	'msgbox "no shapes"
+	end if
+	end if
+	next
+	
+	
+	
+	
+	
+
+	REM msgbox(fil1 & "," & xcel)
+	'objStream.WriteLine(prods(i).Name & "," & xcel)
+	objStream.WriteLine(prods(i).Name & "," & prods(i).Nomenclature)
+	
+	xcel = ""
+		
+	
+	'objStream.WriteLine (prods(i).ReferenceProduct.PartNumber)	
+	
+	end if	
+	
+	'no Adapter/Open Position/Screws
+	REM end if	
+	
+	If Err.Number = 0 Then
+	'msgbox(prods(i).ReferenceProduct.PartNumber)
+	xcel = ""
+	end if
+	
+	
+	REM On Error Goto 0
+	
+	REM xcel = ""
+	
+	'objStream.WriteLine (prods(i).ReferenceProduct.PartNumber)	
+    'reffeld(i) = prods(i).ReferenceProduct.PartNumber
+	'msgbox reffeld(i)
+		
+    Next
+	
+	
+	
+	dim WshShell
+	set WshShell = CreateObject("WScript.Shell")
+	REM dim strPath as string
+	REM strPath = "explorer.exe /select," & strFilePath
+	REM strPath = "explorer.exe /select," & strFilePath
+	REM WshShell.Run strPath
+	WshShell.Run strFilePath
+	
+	msgbox("Opening Excel Sheet..")
+	
+	
+	
+End Sub
+
+

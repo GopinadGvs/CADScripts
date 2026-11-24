@@ -1,0 +1,71 @@
+Language = "VBSCRIPT"
+
+
+Dim iprods As Integer
+Dim wahl As Integer
+Dim sp As Integer
+Dim creat As Integer
+creat = 0
+wahl = 0
+sp = 0
+Dim prods(5000)
+
+
+Sub prodall(ByVal child)
+    Dim children    As Products
+    Dim i           As Integer
+    
+    If child.Products.Count > 0 Then
+        iprods = iprods + 1
+        Set prods(iprods) = child
+        Set children = child.Products
+        For i = 1 To children.Count
+            prodall children.Item(i)
+        Next
+    Else
+      iprods = iprods + 1
+      Set prods(iprods) = child
+    End If
+
+End Sub
+
+
+Sub CATMain()
+
+    Dim doc                 As Document
+    Dim root                As Product
+    Dim children            As Products
+    Dim i                   As Integer
+	Dim reffeld(5000)       As String
+	
+	ierr1 = 0
+    Set doc = CATIA.ActiveDocument
+    Set root = doc.Product
+    strdir = ""
+    
+    iprods = 0
+    Call prodall(root)
+	
+	
+	strFilePath = "C:\Users\vsguddanti\Desktop\List.txt"
+	
+	Set obj = CreateObject("Scripting.FileSystemObject")
+	'obj.DeleteFile(strFilePath)	
+	
+	Set objFSO = CreateObject("Scripting.FileSystemObject")
+	Set objStream = objFSO.OpenTextFile(strFilePath, 8, True, 0)
+	
+
+    'MsgBox "iprods: " & iprods
+
+    For i = 1 To iprods  ' partnamen auf arbeitsfeld speichern	
+
+	
+	objStream.WriteLine (prods(i).ReferenceProduct.PartNumber)
+	
+    'reffeld(i) = prods(i).ReferenceProduct.PartNumber
+	'msgbox reffeld(i)
+		
+    Next
+	
+End Sub

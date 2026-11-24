@@ -1,0 +1,116 @@
+
+Dim InstanceNameIndex
+Dim ParentAllreadyDone
+
+Sub CATMain()
+
+Randomize
+Dim Box
+
+If (CATIA.Documents.Count > 1) Then
+
+  RandomizeInstanceName (CATIA.ActiveDocument.Product)
+
+  'Set InstanceNameIndex = Nothing
+  'Set ParentAllreadyDone = Nothing
+
+  Set InstanceNameIndex = CreateObject("Scripting.Dictionary")
+  Set ParentAllreadyDone = CreateObject("Scripting.Dictionary")
+
+  CorrectInstanceName (CATIA.ActiveDocument.Product)
+
+  Box = MsgBox("All instance names have been updated!!!", 64, "Instance name update finished")
+
+Else
+
+  Box = MsgBox("No instance name was updated!", 16, "Instance name update failed")
+
+End If
+
+End Sub
+
+Sub CorrectInstanceName(P)
+  
+Dim PP
+
+Set PP = P.Products
+
+For X = 1 To PP.Count
+
+   For i = 1 To PP.Count
+   
+    PPartNumber = P.PartNumber
+    PItemName = PP.Item(i).Name
+    CatiaDocumentsItemIName = CATIA.Documents.Item(X).Name
+
+    On Error Resume Next
+
+    Dim ElementToBeRenamed
+
+    Set ElementToBeRenamed = CATIA.Documents.Item(CatiaDocumentsItemIName).GetItem(P.PartNumber).Products.Item(PItemName)
+
+    If Err.Number = 0 Then
+
+      If Not (ParentAllreadyDone.Exists(PPartNumber)) Then
+
+          If InstanceNameIndex.Exists(ElementToBeRenamed.PartNumber) Then
+             InstanceNameIndex.Item(ElementToBeRenamed.PartNumber) = InstanceNameIndex.Item(ElementToBeRenamed.PartNumber) + 1
+          Else
+             InstanceNameIndex.Add (ElementToBeRenamed.PartNumber), "1"
+          End If
+
+          ElementToBeRenamed.Name = ElementToBeRenamed.PartNumber & "." & InstanceNameIndex.Item(ElementToBeRenamed.PartNumber)
+   
+     End If
+
+   End If
+
+  Next
+
+Next
+
+ParentAllreadyDone.Add (PPartNumber), "0"
+
+For Y = 1 To PP.Count
+ CorrectInstanceName (PP.Item(Y))
+Next
+
+End Sub
+
+
+
+Sub RandomizeInstanceName(P)
+  
+Dim PP
+
+Set PP = P.Products
+
+For X = 1 To PP.Count
+
+   For i = 1 To PP.Count
+
+    PPartNumber = P.PartNumber
+    PItemName = PP.Item(i).Name
+    CatiaDocumentsItemIName = CATIA.Documents.Item(X).Name
+
+    On Error Resume Next
+
+    Dim ElementToBeRenamed
+
+    Set ElementToBeRenamed = CATIA.Documents.Item(CatiaDocumentsItemIName).GetItem(P.PartNumber).Products.Item(PItemName)
+
+    If Err.Number = 0 Then
+         
+        ElementToBeRenamed.Name = CInt(Rnd * 100) & CInt(Rnd * 100) & CInt(Rnd * 100) & CInt(Rnd * 100) & CInt(Rnd * 100)
+
+    End If
+
+  Next
+
+Next
+
+For Y = 1 To PP.Count
+ RandomizeInstanceName (PP.Item(Y))
+Next
+
+End Sub

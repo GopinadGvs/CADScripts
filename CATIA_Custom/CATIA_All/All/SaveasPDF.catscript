@@ -1,0 +1,36 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Set drawingDocument1 = CATIA.ActiveDocument
+
+Dim path as String
+path = CATIA.ActiveDocument.Name
+
+dim Acdoc as string
+Acdoc = replace(path,"CATDrawing","pdf")
+Dim objShell
+Dim strPath
+Set objShell = CreateObject("Wscript.Shell")
+strPath = objShell.SpecialFolders("Desktop")
+dim dir
+DIR = strPath + "\pdf\" + Acdoc
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+  
+exists = objFSO.FolderExists(strPath + "\pdf")
+
+if (exists) then 
+   
+drawingDocument1.ExportData dir, "pdf"
+
+else
+
+msgbox("Dir not found.")
+Set objFolder = objFSO.CreateFolder(strPath + "\pdf")
+   
+drawingDocument1.ExportData dir, "pdf"   
+   
+end if
+
+End Sub

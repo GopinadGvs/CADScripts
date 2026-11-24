@@ -1,0 +1,18 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Dim settingControllers1 As SettingControllers
+Set settingControllers1 = CATIA.SettingControllers
+
+Dim visualizationSettingAtt1 As SettingController
+Set visualizationSettingAtt1 = settingControllers1.Item("CATVizVisualizationSettingCtrl")
+
+Dim double1 As Double
+double1 = visualizationSettingAtt1.AntiAliasingOffset
+
+visualizationSettingAtt1.SetBackgroundRGB 51, 51, 102
+
+visualizationSettingAtt1.SaveRepository 
+
+End Sub

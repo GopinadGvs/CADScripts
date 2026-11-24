@@ -1,0 +1,55 @@
+Language="VBSCRIPT"
+Sub CATMain()
+
+Dim sel as Selection
+Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+
+set prod1=sel.Item(1).Value
+
+Dim path1 as string
+path1 = prod1.ReferenceProduct.Parent.FullName
+
+
+REM msgbox(path1)
+
+REM Dim path1 as String
+REM path1 = CATIA.ActiveDocument.FullName
+
+'path1 ="V:\VW380_SVHL\3D FINISH\3070\ST3070 3D FINISH\ST-38H858265"
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+
+'msgbox(path1)
+
+'set files1 = objFSO.Getfolder(path1)
+
+set file = objFSO.Getfile(path1)
+
+'msgbox(file.Name)
+'msgbox(file.Path)
+'msgbox(Left(file.Path, len(file.Path)-len(file.Name)))
+
+'dim path2 as string
+
+'set path2 = Left(file.Path, len(file.Path)-len(file.Name))
+
+set files1 = objFSO.Getfolder(Left(file.Path, len(file.Path)-len(file.Name)-1))
+
+'msgbox(files1.files.count)
+
+for each fil in files1.files
+
+dim typ as integer
+typ = InStr(1,fil.name,".CATDrawing",1)
+
+if(typ>1) then
+
+Set documents1 = CATIA.Documents
+Set drawingDocument1 = documents1.Open(Left(file.Path, len(file.Path)-len(file.Name)) & fil.name)
+
+end if
+
+next
+
+End Sub

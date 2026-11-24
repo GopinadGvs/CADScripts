@@ -1,0 +1,474 @@
+Language = "VBSCRIPT"
+' Ändert Namen auf PartNumber ab.
+'#xxxxxxxxxxxxxxxxxxxxxxxxBeschreibungxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+'#  Makro:         RepPartNam.CATScript
+'#  oeffnen der struktur mit new from
+'#  ersetzt in der partnumber einen angegebenen string mit einen neuen
+'#  aendert entsprechend den instance-name
+'#  die partnumber wird als filename uebernommen
+'#  Input:          baumstruktur,
+'#                  alter string, der ersetzt werden soll
+'#                  neuer string, der ersetzt wird (gleich lang!)
+'#  Aktion:         Durchsucht den Baum. aendert die Partnumber entsprechend
+'#                  auch den Instancename
+'#                  Falls aus der Unterstruktur die filenamen nicht
+'#                  automatisch geaendert werden , kann ein Verzeichnis angegeben
+'#                  werden und die files werden mit den neuen Namen abgespeichert
+'#                  ansonsten soll manuell gespeichert werden
+'#  Output:         neue Produktstruktur
+'#                  speichern der Komponenten mit dem neuen Namen
+'#xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+'#  Sprache:        VB-Script
+'#  Laendereinst.:  Englisch(USA)   Englisch(USA)
+'#  Plattform:      HP: HPUX        PC: HP
+'#  Version:        DMU-Navigatur R11 SP3 H13
+'#  25.06.04        Scheucut        erstellt
+'#  02.09.04        Scheucut        Änderung falls im Instname keine Nummer kein Anhang
+'#  13.07.05        Poeschl         aus 9 stellen 12 machen   und  die ersten 3 aendern
+'#  09.08.05        Braun           die ersten 16 Zeichen ändern und speichern mit neuem Namen
+'#  17.08.05        Braun           freies Suchen und ersetzen von Namensteilen
+'#  18.08.05        Braun           Dialoge überarbeitet (interner Aufruf)
+'#  19.08.05        Braun           Struktur korrigieren, Ablauf überarbeiten
+'#  29.08.05        Braun           Fehlerbeseitigung
+'#  29.08.05        Braun           automatische Speicherung entfernen
+'#  30.08.05        Braun           Dialogsteuerung ändern
+'#xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+'#  Version: 1.4.3
+'#xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+Dim iprods As Integer
+Dim wahl As Integer
+Dim sp As Integer
+Dim creat As Integer
+creat = 0
+wahl = 0
+sp = 0
+Dim prods(5000)
+
+
+Sub prodall(ByVal child)
+    Dim children    As Products
+    Dim i           As Integer
+    
+    If child.Products.Count > 0 Then
+        iprods = iprods + 1
+        Set prods(iprods) = child
+        Set children = child.Products
+        For i = 1 To children.Count
+            prodall children.Item(i)
+        Next
+    Else
+      iprods = iprods + 1
+      Set prods(iprods) = child
+    End If
+
+End Sub
+
+Sub CATMain()
+
+    Dim doc                 As Document
+    Dim root                As Product
+    Dim children            As Products
+    Dim i                   As Integer
+    Dim refnam              As String
+    Dim reffeld(5000)       As String
+    Dim refnam1             As String
+    Dim textl               As String
+    Dim auswahl             As String
+    Dim strsearch           As String
+    Dim isearch             As Integer
+    Dim search              As String
+    Dim ipos                As Integer
+    Dim ifpos(5000)         As Integer
+    Dim j                   As Integer
+    Dim fehlen              As String
+    Dim ierr1               As Integer
+    Dim strdir              As String
+    Dim straltend           As String
+    Dim strneuend           As String
+    Dim ilenaltend          As Integer
+    Dim ilenneuend          As Integer
+    Dim igef                As Integer
+    Dim ilen                As Integer
+    Dim in1                 As Integer
+    Dim in2                 As Integer
+    Dim in3                 As Integer
+    Dim lenR                As Integer
+    Dim lenN                As Integer
+    Dim textr               As String
+    Dim prod1               As Product
+    Dim strrst              As String
+    Dim Text                As String
+    Dim irgt                As Integer
+    Dim positionen          As String
+    Dim posTmp
+    Dim strrgt1             As String
+    Dim antwort             As String
+    Dim fortsetzen          As String
+    
+    
+    ierr1 = 0
+    Set doc = CATIA.ActiveDocument
+    Set root = doc.Product
+    strdir = ""
+    
+    iprods = 0
+    Call prodall(root)
+
+    'MsgBox "iprods: " & iprods
+
+    For i = 1 To iprods  ' partnamen auf arbeitsfeld speichern
+        reffeld(i) = prods(i).ReferenceProduct.PartNumber
+    Next
+    
+   'Auswahl ob einzeln oder alle auf einmal ändern
+    If wahl = 0 Then
+        auswahl = MsgBox("Alle Namen durch eine Aktion ändern ?", vbYesNoCancel)
+    Else
+        auswahl = vbNo
+    End If
+    
+	'***nichts ändern***
+    If auswahl = vbCancel Then
+        Exit Sub
+    
+    '***alle änden***
+    ElseIf auswahl = vbYes Then
+    
+        'Eingabe des zu ändernden Namens
+        fehlen = True
+        Do While fehlen = True
+            strsearch = InputBox("Zu ändernden Namen eingeben:")
+            If strsearch = "" Then
+                weiter = MsgBox("Kein Suchname eingegeben." & vbCrLf & vbCrLf & _
+                                "Erneute Eingabe ?", vbYesNo)
+                If weiter = vbNo Then
+                    Exit Sub
+                End If
+                fehlen = True
+            Else
+                fehlen = False
+            End If
+        Loop
+        
+        'Partnamen durchsuchen
+        For i = 1 To iprods
+            If reffeld(i) <> "" Then
+                If InStr(reffeld(i), strsearch) <> 0 Then
+                    isearch = 0
+                    'exit for
+                Else
+                    isearch = 1
+                    Exit For
+                End If
+            End If
+        Next
+        
+        'Suchname nicht gefunden
+  '      If isearch = 1 Then
+  '          search = MsgBox("Der gesuchte Name ist in einer Komponenete nicht enthalten. Suche ändern ?", vbYesNo)
+  '          If search = vbYes Then
+  '              Call CATMain
+  '              Exit Sub
+  '          Else
+  '              Exit Sub
+  '          End If
+  '      End If
+        
+        'alten Namen merken
+        straltend = strsearch
+    
+        'neuen Namen eingeben
+        fehlen = True
+        Do While fehlen = True
+            strneuend = InputBox(" Text " & straltend & " durch folgenden Namen ersetzen")
+            If strneuend = "" Then
+                ierr1 = 1
+                weiter = MsgBox("Kein Ersetzungsname eingegeben." & vbCrLf & vbCrLf & _
+                                "Erneute Eingabe ?", vbYesNo)
+                If weiter = vbNo Then
+                    Exit Sub
+                End If
+              fehlen = True
+            Else
+                fehlen = False
+                ierr1 = 0
+            End If
+        Loop
+        
+        'Längen bestimmen
+        ilenaltend = Len(straltend)
+        ilenneuend = Len(strneuend)
+        
+        igef = 0
+        
+        'die namen der parts in arbeitsfeld speichern
+        If ierr1 = 0 Then
+            For i = 1 To iprods
+               refnam = reffeld(i)
+               'berechne laenge des namens
+               ilen = Len(refnam)
+               in1 = 0
+             
+               'Postion des alten Textes bestimmen
+               in1 = InStr(refnam, straltend)
+               'msgbox in1
+                
+              If in1 = 0 Then
+                 in2 = InStr(prods(i).Name, straltend)
+              End If
+                
+              If in1 > 0 Or in2 > 0 Then
+                    igef = igef + 1
+                    If in1 > 0 Then
+                         textl = Left(refnam, in1 - 1)
+                        ' msgbox "links: " &textl
+                    
+                        'msgbox "Länge alt: " & ilenaltend
+                        lenR = ilen - in1 + 1 - ilenaltend
+                        'msgbox "Länge: " & ilen
+                        'msgbox "Länge rechts: " & lenr
+                        textr = Right(refnam, lenR)
+                        'msgbox "rechts: " & textr
+                    
+                         ' neuen string aufbauen mit ersetzten zeichen
+                         refnam1 = textl & strneuend & textr
+                         'msgbox "neuer Name " & refnam1
+                    Else
+                        refnam1 = refnam
+                    End If
+                    'msgbox "Neuer Name: "&refnam1
+                    
+                     If i > 1 Then
+                        Set prod1 = ReplaceProd(prods(i))
+                     Else
+                        Set prod1 = prods(i)
+                     End If
+                    
+                     prod1.PartNumber = refnam1
+                     prod1.ReferenceProduct.PartNumber = refnam1
+                        
+                     strrst = Right(prod1.Name, 4)
+                     in3 = InStr(strrst, ".")
+                    
+                     If in3 > 0 Then
+                        strrst = Right(strrst, 4 - in3 + 1)
+                     Else
+                        strrst = ""
+                     End If
+                    
+                     prod1.Name = refnam1 & strrst
+                     prod1.ApplyWorkMode Default
+                    
+                     in1 = 0
+                     Text = prod1.ReferenceProduct.Parent.Name
+                End If
+            Next
+                            
+            modal = MsgBox( "Komponenten wurden umbenannt." & vbCrLf & _
+                    "Bitte speichern Sie sie über die 'Sicherungsverwaltung...' ab.", vbSystemModal)
+        End If
+    
+    
+    '***einzeln ändern***
+    Else
+        wahl = 1
+        j = 1
+        isearch = 0
+        lenR = 0
+        lenN = 0
+        irgt = 0
+        refnam1 = ""
+        refnam = ""
+        
+        'Eingabe des zu ändernden Namens
+        fehlen = True
+        Do While fehlen = True
+            strsearch = InputBox("Zu ändernden Namen eingeben:")
+            If strsearch = "" Then
+                weiter = MsgBox("Kein Suchnamen eingegeben." & vbCrLf & vbCrLf & _
+                                "Erneute Eingabe ?", vbYesNo)
+                If weiter = vbNo Then
+                    Exit Sub
+                End If
+                fehlen = True
+            Else
+                fehlen = False
+            End If
+        Loop
+        
+        'partnamen durchsuchen
+        For i = 1 To iprods
+            If reffeld(i) <> "" Then
+                If InStr(reffeld(i), strsearch) <> 0 Then
+                    isearch = 0
+                    ifpos(j) = i
+                    j = j + 1
+                Else
+                    isearch = 1
+                End If
+            End If
+        Next
+        
+        If isearch = 1 And j = 1 Then
+            search = MsgBox("Der gesuchte Name ist in keiner Komponenete enthalten. Suche ändern ?", vbYesNo)
+            If search = vbYes Then
+                Call CATMain
+                Exit Sub
+            Else
+                Exit Sub
+            End If
+        ElseIf j = 2 Then
+            ipos = ifpos(1)
+        ElseIf j > 2 Then
+            For i = 1 To j - 1
+                positionen = positionen & ifpos(i) & " --  " & reffeld(ifpos(i)) & vbCrLf
+            Next
+            fehlen = True
+            Do While fehlen = True
+                posTmp = InputBox("Der gesuchte Name tritt mehrfach auf. " & vbCrLf & _
+                "Bitte die gewünschte Position aus folgenden möglichen eingeben: " & vbCrLf & _
+                positionen)
+                If posTmp = "" Then
+                    weiter = MsgBox("Keine Position gewählt." & vbCrLf & vbCrLf & _
+                                "Erneute Eingabe ?", vbYesNo)
+                    If weiter = vbNo Then
+                        Exit Sub
+                    End If
+                    fehlen = True
+                Else
+                    fehlen = False
+                End If
+            Loop
+            ipos = posTmp
+        End If
+        
+        straltend = strsearch
+        If ierr1 = 0 Then
+            fehlen = True
+            Do While fehlen = True
+                strneuend = InputBox(" Text " & straltend & " durch folgenden Namen ersetzen")
+                If strneuend = "" Then ' falls string leer, diesen Teil ueberspringen
+                    ierr1 = 1
+                    weiter = MsgBox("Kein Ersetzungsname eingegeben." & vbCrLf & vbCrLf & _
+                                "Erneute Eingabe ?", vbYesNo)
+                    If weiter = vbNo Then
+                        Exit Sub
+                    End If
+                    fehlen = True
+                Else
+                    fehlen = False
+                End If
+            Loop
+        End If
+        
+        ilenaltend = Len(straltend)
+        ilenneuend = Len(strneuend)
+        
+        igef = 0
+        'die namen der parts in arbeitsfeld speichern
+        
+        If ierr1 = 0 Then
+            refnam = reffeld(ipos)
+            ilen = Len(refnam)                  ' berechne laenge des namens
+            in1 = 0
+        
+            'Postion des alten Textes bestimmen
+            in1 = InStr(refnam, straltend)
+            'msgbox in1
+        
+            If in1 = 0 Then
+                in2 = InStr(prods(ipos).Name, straltend)
+            End If
+        
+            If in1 > 0 Or in2 > 0 Then
+                igef = igef + 1
+                If in1 > 0 Then
+                    textl = Left(refnam, in1 - 1)
+                    ' msgbox "links: " &textl
+    
+                    'msgbox "Länge alt: " & ilenaltend
+                    lenR = ilen - in1 + 1 - ilenaltend
+                    'msgbox "Länge: " & ilen
+                    'msgbox "Länge rechts: " & lenr
+                    textr = Right(refnam, lenR)
+                    'msgbox "rechts: " & textr
+    
+                    'neuen string aufbauen mit ersetzten zeichen
+                    refnam1 = textl & strneuend & textr
+                    'msgbox "neuer Name " & refnam1
+                Else
+                    refnam1 = refnam
+                End If
+                'msgbox "Neuer Name: "&refnam1
+        
+                If i > 1 Then
+                    Set prod1 = ReplaceProd(prods(ipos))
+                Else
+                    Set prod1 = prods(ipos)
+                End If
+
+                prod1.PartNumber = refnam1
+                prod1.ReferenceProduct.PartNumber = refnam1
+        
+                strrst = Right(prod1.Name, 4)
+                in3 = InStr(strrst, ".")
+    
+                If in3 > 0 Then
+                    strrst = Right(strrst, 4 - in3 + 1)
+                Else
+                    strrst = ""
+                End If
+
+                prod1.Name = refnam1 & strrst
+                prod1.ApplyWorkMode Default
+    
+                in1 = 0
+                Text = prod1.ReferenceProduct.Parent.Name
+            
+            End If
+        End If
+        
+    End If 'Ende Auswahl: alle - einzeln
+    
+    'Abfrage nach fortsetzen
+    fortsetzen = MsgBox("Weitere Namen ändern ?", vbYesNo)
+    If fortsetzen = vbYes Then
+        Call CATMain
+        Exit Sub
+    Else
+        Exit Sub
+    End If
+      
+End Sub
+
+Function ReplaceProd(ByVal prod) As Product
+     Dim RefProds
+     Dim RefProd    As Product
+     Dim nam        As String
+     Dim TempDoc
+     Dim docref
+     Dim ierror     As Integer
+     Dim docprods   As Products
+     
+      Set RefProds = prod.Parent.Parent
+      Set RefProd = RefProds.ReferenceProduct
+      Set TempDoc = RefProd.Parent
+      
+      nam = RefProds.PartNumber
+    '  msgbox " was ist das " & nam & TempDoc.Name
+      Set docref = TempDoc.GetItem(nam)
+      
+      Set docprods = docref.Products
+      On Error Resume Next
+      ierror = 0
+    '  msgbox prod.name
+      Set ReplaceProd = docprods.Item(prod.Name)
+    '  msgbox ReplaceProd.name
+      ierror = Err.Number
+    '  msgbox ierror
+      If ierror <> 0 Then
+        Set ReplaceProd = prod
+      End If
+      On Error GoTo 0
+End Function

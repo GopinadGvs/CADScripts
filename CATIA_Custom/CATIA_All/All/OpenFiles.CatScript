@@ -1,0 +1,19 @@
+Language="VBSCRIPT"
+Sub CATMain()
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Set objFile = objFSO.OpenTextFile("C:\Users\vsguddanti\Desktop\Path.txt", 1)
+
+Do While objFile.AtEndOfStream = False
+strLine = objFile.ReadLine
+
+dim path as string
+
+path = Replace(strLine,"""","")
+Set documents1 = CATIA.Documents
+Set drawingDocument1 = documents1.Open(path)
+
+Loop
+REM objFile.Close
+
+End Sub

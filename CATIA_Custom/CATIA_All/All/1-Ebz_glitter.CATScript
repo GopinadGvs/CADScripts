@@ -1,0 +1,1246 @@
+' COPYRIGHT KUKA Systems GmbH 2006,2007
+'           86165 Augsburg
+'           Germany
+'******************************************************************************
+' The copyright to the computer program(s) herein is the property of
+' KUKA Systems GmbH, Germany. The program(s) may be used and/or
+' copied only with the written permission of KUKA Systems GmbH or
+' in accordance with the terms and conditions stipulated in the
+' agreement/contract under which the program(s) have been supplied.
+'******************************************************************************
+' Purpose:      Create/modify/delete a NET (X,Y,Z) in the active View
+'
+' optional:     nothing
+'
+' Project:      general
+'
+' Input:        2 points (2D) for definition of dimension of NET (rectangle
+'               parallel to the Net from 3D)
+'
+' Output:       NET with description
+'******************************************************************************
+' Author:       Maiwald, Lutz
+'               +49 (0)821 797-3873
+'               lutz.maiwald@kuka.de
+'
+' Created:      10.06.2006
+'               30.06.2006 Input from standards for creation of NET
+'               11.08.2006 Correction of axis description
+'               29.05.2007 Corrections for R16
+'               10.09.2007 Corrections for invers NET and description position
+'******************************************************************************
+' Languages:    VBScript
+' Version:      V5R14, V5R16
+' Loc.Settings: English
+'******************************************************************************
+' DAS SRIPT DARF ALS SOLCHES WEDER VERKAUFT NOCH ANGEBOTEN WERDEN.
+'******************************************************************************
+'Attribute VB_Name = "KUKA_Gitter"
+
+
+Option Explicit
+Language = "VBSCRIPT"
+
+
+Dim drawingDocument As drawingDocument
+Dim drawingWindow As Window
+Dim drawingSheets As drawingSheets
+Dim drawingSheet As drawingSheet
+Dim drawingViews As drawingViews
+Dim drawingView As drawingView
+Dim tempDetailSheet As drawingSheet
+Dim netDetailSheet As drawingSheet
+Dim netDetail As drawingView
+Dim spaceWindow As Window
+Dim linkedProducts() As Object
+Dim linkedDocument As document
+Dim I As Integer
+Dim J As Integer
+Dim msgInput As String
+Dim inputString As String
+Dim inputBoolean As Boolean
+Dim sFilter()
+Dim iStatus As String
+Dim iSel 'As Selection
+Dim goExit As Boolean
+Dim List() As Variant
+Dim L As Integer
+Dim roundTolerance As Double
+Dim debugMode As Boolean
+Dim netColorString As String
+Dim inputTextDistH As Double
+Dim inputTextDistV As Double
+Dim netColorName As String
+Dim netColor() As String
+Dim netRed As Long
+Dim netGreen As Long
+Dim netBlue As Long
+Dim textPrefix As String
+Dim raster As Integer
+Dim textPosH As String
+Dim textPosV As String
+Dim textFontSize As Double
+Dim textDistH As Double
+Dim textDistV As Double
+Dim descriptionH As String
+Dim descriptionV As String
+Dim description() As String
+'Dim PI As Double
+Dim firstRun As String
+Dim gridStandards()
+Dim noNetCreate As Boolean
+Const PI = 3.14159265358979
+
+
+
+Sub CATMain()
+
+    goExit = False
+    debugMode = False
+    roundTolerance = 1000000 '--> Rundung von Vektoren (Wert 0..1) auf 6 Stellen nach dem Komma
+    noNetCreate = False
+    
+    If firstRun <> "no" Then
+        If TypeName(CATIA.ActiveDocument) = "DrawingDocument" Then
+            '--> Makro-Default der Standards
+            ReDim netColor(2)
+            netColor(0) = "16"
+            netColor(1) = "3"
+            netColor(2) = "67"
+            textPrefix = "Net_"
+            raster = 100
+            textPosH = "left"
+            textPosV = "bottom"
+            textFontSize = 5
+            textDistH = 2.5 * textFontSize
+            textDistV = 1 * textFontSize
+            goExit = False
+        Else
+            goExit = True
+        End If
+        
+        If goExit Then
+            MsgBox "Wrong documenttyp or no document loaded!" & vbLf & vbLf & _
+                    "Script will be closed!", vbOKOnly + vbCritical, "   Cancel   "
+            goExit = True
+            Exit Sub
+        End If
+        
+        Set drawingDocument = CATIA.ActiveDocument
+        Set drawingWindow = CATIA.ActiveWindow
+        Set drawingSheets = drawingDocument.Sheets
+        Set drawingSheet = drawingSheets.ActiveSheet
+        Set drawingViews = drawingSheet.Views
+        
+        Set drawingView = drawingViews.ActiveView
+        drawingWindow.ActiveViewer.Viewpoint2D.PutOrigin Array(drawingView.x, drawingView.Y)
+        
+        msgInput = MsgBox("Create/modificate/delete NET from view  '" & drawingView.name & "' " & vbLf & vbLf & _
+                            "in the active sheet  '" & drawingSheet.name & "'  ?", _
+                            vbYesNoCancel + vbQuestion, "   View to Process   ")
+    Else
+        msgInput = vbNo
+    End If
+    
+    If msgInput = vbNo Then
+        '--> select view
+        Set iSel = CATIA.ActiveDocument.Selection
+        iSel.Clear
+        ReDim sFilter(0)
+        sFilter(0) = "DrawingView"
+        msgInput = MsgBox("Please select view for create/modificate/delete NET!" & vbLf & vbLf & _
+                            "(If view is in an other sheet, select them in the tree!)", _
+                            vbOKOnly, "   Hint of Insert   ")
+        iStatus = iSel.SelectElement2(sFilter, "Select view", False)
+        If (iStatus = "Cancel") Then
+            MsgBox "Wrong Selection (e.g. Change of Sheet) or Cancel(ESC)!" & vbLf & vbLf & _
+                    "Script will be closed!!!", vbOKOnly + vbCritical, "   Cancel   "
+            Exit Sub
+        End If
+        Set drawingView = iSelItem(1).Value
+        iSel.Clear
+        drawingView.Activate
+        'If drawingView.Parent.Parent <> drawingSheet Then
+        Set drawingSheet = drawingView.Parent.Parent
+        drawingSheet.Activate
+        'End If
+    ElseIf msgInput <> vbYes Then
+        Exit Sub
+    End If
+    
+    If drawingView.IsGenerative Then
+        If drawingView.LockStatus Then
+            MsgBox "Selected view is locked!" & vbLf & vbLf & _
+                "Cannot create/modificate/delete NET!", vbOKOnly + vbCritical, "   Locked View   "
+            noNetCreate = True
+        Else
+            '--> KUKA-Gitter in View? (Layer: 256)
+            Dim kukaNetExist As Boolean
+            Dim kukaNetDelete As Boolean
+            Dim transferList()
+            Dim transferListCount As Integer
+            Set iSel = CATIA.ActiveDocument.Selection
+            iSel.Clear
+            iSel.Add drawingView
+            'iSel.Search "Color='(" & netColor(0) & "," & netColor(1) & "," & netColor(2) & ")',sel"
+            iSel.Search ("Name=" & textPrefix & "*,sel")
+            If iSelCount > 0 Then
+                iSel.VisProperties.SetPick catVisPropertyNoPickAttr
+                msgInput = MsgBox("Found existing NET!" & vbLf & vbLf & _
+                                    "ONLY delete this NET?" _
+                                    , vbYesNo + vbQuestion, "   ONLY Delete ? ")
+                If msgInput = vbYes Then
+                    iSel.Cut
+                    iSel.Clear
+                    firstRun = "no"
+                    msgInput = MsgBox("NET deleted!" & vbLf & vbLf & _
+                                        "Create/modificate/delete another NET?" _
+                                        , vbYesNo + vbQuestion, "   Resume / End ? ")
+                    If msgInput = vbYes Then CATMain
+                    goExit = True
+                    Exit Sub
+                Else
+                    iSel.Clear
+                    kukaNetExist = True
+                End If
+            Else
+                iSel.Clear
+                kukaNetExist = False
+            End If
+            
+            Dim viewFirstVector(2) As Variant 'Double
+            Dim viewSecondVector(2) As Variant 'Double
+            Dim viewNormalVector(2) As Variant 'Double
+            
+            Dim linkedProductsCount As Integer
+            '--> Funktionsaufruf: abgeleitete Parts/Products
+            SearchLinkedDocuments drawingView, viewFirstVector, viewSecondVector, viewNormalVector, linkedProducts, linkedProductsCount
+             
+            drawingWindow.Activate
+            drawingDocument.Activate
+            
+            If goExit Then Exit Sub
+            
+            Dim netAngle(2) As Double
+            Dim netLines As Integer
+            Dim netInvert As Double
+            
+            netLines = 0
+            netInvert = 1
+            
+            I = 0
+            For I = 0 To 2
+                If viewNormalVector(I) = 0 Then
+                    netLines = netLines + 1
+                    If viewFirstVector(I) = 0 Then
+                        If viewSecondVector(I) < 0 Then
+                            'netAngle(I) = 270°
+                            netAngle(I) = PI * 3 / 2
+                        Else
+                            'netAngle(I) = 90°
+                            netAngle(I) = PI / 2
+                        End If
+                    Else
+                        netAngle(I) = Atn(viewSecondVector(I) / viewFirstVector(I))
+                    End If
+                    
+                    If viewFirstVector(I) > 0 And viewSecondVector(I) < 0 Then
+                        netAngle(I) = (2 * PI) + netAngle(I)
+                    ElseIf viewFirstVector(I) < 0 Then
+                        netAngle(I) = PI + netAngle(I)
+                    End If
+                Else
+                    If viewNormalVector(I) = -1 Then
+                        netInvert = -1
+                    End If
+                    netAngle(I) = 361
+                End If
+            Next
+        End If
+    Else
+        MsgBox "Selected view has no link to 3D(Space)!" & vbLf & vbLf & _
+                "Cannot create the NET!", vbOKOnly + vbCritical, "   No NET   "
+        noNetCreate = True
+    End If
+    
+    If noNetCreate Then
+        '--> Auswertung der Abbruchkriterien von weiter oben
+    ElseIf netLines = 0 Then
+        MsgBox "Selected view not normal to one of the masterplanes!" & vbLf & vbLf & _
+                "Cannot create the NET!", vbOKOnly + vbCritical, "   No NET   "
+    Else
+        '--> Modifikation der Standards
+        ReDim gridStandards(8)
+        gridStandards(0) = netColor(0)
+        gridStandards(1) = netColor(1)
+        gridStandards(2) = netColor(2)
+        gridStandards(3) = raster
+        gridStandards(4) = textPosH
+        gridStandards(5) = textPosV
+        gridStandards(6) = textFontSize
+        gridStandards(7) = textDistH
+        gridStandards(8) = textDistV
+        
+        SetStandards gridStandards
+        
+        If goExit Then Exit Sub
+        
+        netColor(0) = gridStandards(0)
+        netColor(1) = gridStandards(1)
+        netColor(2) = gridStandards(2)
+        raster = gridStandards(3)
+        textPosH = gridStandards(4)
+        textPosV = gridStandards(5)
+        textFontSize = gridStandards(6)
+        textDistH = gridStandards(7)
+        textDistV = gridStandards(8)
+        
+        If goExit Then Exit Sub
+        
+        '--> Netzgenerierung/-modifikation
+        Dim indicateObject As Object
+        Dim drawingWindowLocation(1)
+        Dim first2DCoord(1)
+        Dim second2DCoord(1)
+        Dim createNetFirst As Boolean
+        Dim createNetEnd As Boolean
+        Dim first2DCoordAbs(1)
+        Dim second2DCoordAbs(1)
+        Dim trafoMatrix(3)
+        Dim componentAngle As Double
+        Dim netInvertInfo
+        
+        Set indicateObject = drawingDocument
+        createNetFirst = True
+        createNetEnd = False
+        
+        'Set iSel = CATIA.ActiveDocument.selection
+        
+        '--> Loop: 2 innere Punkte fuer Gitter
+        Do Until createNetEnd = True
+            
+            Set iSel = CATIA.ActiveDocument.Selection
+            
+            'Set tempDetailSheet = drawingSheets.AddDetail("KUKA_Temp")
+            'drawingSheets.Remove tempDetailSheet.name
+            drawingSheet.Activate
+            drawingView.Activate
+            
+            drawingWindow.ActiveViewer.Viewpoint2D.PutOrigin Array(drawingView.x, drawingView.Y)
+            'drawingWindow.ActiveViewer.Viewpoint2D.Zoom = (drawingView.Scale2 / 20)
+                        
+            MsgBox "Define the dimensioning of the NET by indicate" & vbLf & _
+                    "2 points in the outer-quadrants of the NET to build" & vbLf & vbLf & _
+                    "Please indicate 2 points!", vbOKOnly, "   Indicate Points by Click   "
+            
+            iStatus = indicateObject.Indicate2D("Indicate the first location into the drawing window", drawingWindowLocation)
+            If (iStatus = "Cancel") Then
+                MsgBox "Wrong indication or Cancel(ESC)" & vbLf & vbLf & _
+                        "Script will be closed!", vbOKOnly + vbCritical, "   Cancel   "
+                Exit Sub
+            End If
+            
+            first2DCoord(0) = drawingWindowLocation(0)
+            first2DCoord(1) = drawingWindowLocation(1)
+            
+            iStatus = indicateObject.Indicate2D("Indicate the second location into the drawing window", drawingWindowLocation)
+            If (iStatus = "Cancel") Then
+                MsgBox "Wrong indication or Cancel(ESC)" & vbLf & vbLf & _
+                        "Script will be closed!", vbOKOnly + vbCritical, "   Cancel   "
+                Exit Sub
+            End If
+            
+            second2DCoord(0) = drawingWindowLocation(0)
+            second2DCoord(1) = drawingWindowLocation(1)
+            
+            ReDim description(2)
+            description(0) = "X"
+            description(1) = "Y"
+            description(2) = "Z"
+            descriptionH = ""
+            descriptionV = ""
+            
+            If netLines = 2 Then
+                If netAngle(0) = 361 Then
+                    componentAngle = netAngle(1)
+                    descriptionH = description(1)
+                    descriptionV = description(2)
+                ElseIf netAngle(1) = 361 Then
+                    componentAngle = netAngle(2)
+                    descriptionH = description(2)
+                    descriptionV = description(0)
+                ElseIf netAngle(2) = 361 Then
+                    componentAngle = netAngle(0)
+                    descriptionH = description(0)
+                    descriptionV = description(1)
+                End If
+            ElseIf netLines = 1 Then
+                I = 0
+                For I = 0 To 2
+                    If netAngle(I) < 361 Then
+                        descriptionH = description(I)
+                        descriptionV = ""
+                        componentAngle = netAngle(I)
+                        Exit For
+                    End If
+                Next
+            End If
+            
+            first2DCoordAbs(0) = first2DCoord(0) * Cos(componentAngle) + first2DCoord(1) * Sin(componentAngle)
+            first2DCoordAbs(1) = -first2DCoord(0) * Sin(componentAngle) + first2DCoord(1) * Cos(componentAngle)
+            second2DCoordAbs(0) = second2DCoord(0) * Cos(componentAngle) + second2DCoord(1) * Sin(componentAngle)
+            second2DCoordAbs(1) = -second2DCoord(0) * Sin(componentAngle) + second2DCoord(1) * Cos(componentAngle)
+            
+            If netLines = 2 Then
+                first2DCoordAbs(1) = first2DCoordAbs(1) * netInvert
+                second2DCoordAbs(1) = second2DCoordAbs(1) * netInvert
+            End If
+            
+            Set drawingView = drawingViews.ActiveView
+            
+            If kukaNetExist Then
+                iSel.Add drawingView
+                'iSel.Search "Color='(" & netColor(0) & "," & netColor(1) & "," & netColor(2) & ")',sel"
+                iSel.Search ("(Name=" & textPrefix & "*) + (Name='netDetail_*'),sel")
+                iSel.Cut
+                iSel.Clear
+            End If
+            
+            If createNetFirst = False Then drawingSheets.Remove netDetailSheet.name
+            
+            Set netDetailSheet = drawingSheets.AddDetail("KUKA_Gitter")
+            Set netDetail = netDetailSheet.Views.Add("netDetail_" & drawingSheet.name & "_" & drawingView.name)
+            
+            netDetailSheet.[Scale] = 1
+            netDetail.[Scale2] = 1
+            
+            netDetail.Activate
+            
+            NetDetailCreate first2DCoordAbs, second2DCoordAbs, componentAngle, netLines, netInvert
+            
+            drawingSheet.Activate
+            drawingView.Activate
+            
+            '--> insert Detail
+            drawingView.Components.Add netDetail, 0, 0
+            drawingView.Components.Item(drawingView.Components.Count).Angle = componentAngle
+            If netInvert = -1 Then
+                drawingView.Components.Item(drawingView.Components.Count).Flip
+                netInvertInfo = "(The angle of the texts may be different from the end position!)"
+            Else
+                netInvertInfo = ""
+            End If
+            
+            iSel.Clear
+            iSel.Add drawingView.Components.Item(drawingView.Components.Count)
+            'iSel.VisProperties.SetVisibleColor 200, 0, 200, 1
+            iSel.VisProperties.SetVisibleColor CLng(netColor(0)), CLng(netColor(1)), CLng(netColor(2)), 1
+            iSel.VisProperties.SetVisibleWidth 1, 1
+            iSel.VisProperties.SetPick catVisPropertyNoPickAttr
+            'iSel.VisProperties.SetLayer catVisLayerBasic, 256
+            iSel.Clear
+            
+            drawingWindow.ActiveViewer.Viewpoint2D.PutOrigin Array(drawingView.x, drawingView.Y)
+            '--> Abfrage Gitter i.O. , set createNetFirst
+            msgInput = MsgBox("Accept this NET?" & vbLf & vbLf & netInvertInfo _
+                                , vbYesNo + vbQuestion, "   Net Correct ?   ")
+            If msgInput = vbNo Then
+                createNetEnd = False
+                createNetFirst = False
+            Else
+                createNetEnd = True
+            End If
+            
+        Loop
+            
+        drawingView.Components.Item(drawingView.Components.Count).Explode
+        iSel.Clear
+        iSel.Add drawingView.Components.Item(drawingView.Components.Count)
+        iSel.Cut
+        iSel.Clear
+        drawingSheets.Remove netDetailSheet.name
+        
+        'CATIA.ActiveWindow.ActiveViewer.Reframe
+        drawingView.Activate
+        drawingSheet.Activate
+        
+    End If
+        
+    firstRun = "no"
+    msgInput = MsgBox("Creation/modification/deletion of NET finished!" & vbLf & vbLf & _
+                        "Create/modificate/delete another NET?" _
+                        , vbYesNo + vbQuestion, "   Resume / End ? ")
+    If msgInput = vbYes Then CATMain
+    
+    If goExit Then Exit Sub
+    
+    firstRun = ""
+
+End Sub
+
+
+'--> Infos zur View auslesen
+'       Inputs:  -drawingView
+'       Outputs: -viewFirstVector (Array of 1,2,3)
+'                -viewSecondVector (Array of 1,2,3)
+'                -viewNormalVector (Array of 1,2,3)
+'                -linkedProducts (Array of 1,...,I)
+'                -I (Anzahl der abgebildeten Products)
+Public Function SearchLinkedDocuments(ByVal drawingView, ByRef viewFirstVector, ByRef viewSecondVector, _
+                                        ByRef viewNormalVector, ByRef linkedProducts, ByRef I) 'ByRef/ByVal???
+    
+    Dim linkedProduct As Product
+    'Dim linkedDocument As Document
+    Dim linkedDocumentExist As String
+    linkedDocumentExist = "1"
+    
+    On Error Resume Next
+    Set linkedProduct = drawingView.GenerativeBehavior.document
+    If Err = -2147418113 Or linkedProduct Is Nothing Then
+        linkedDocumentExist = "0"
+    End If
+    On Error GoTo 0
+    
+    If linkedDocumentExist = "0" Then
+        MsgBox "Linked Part/Product not loaded!" & vbLf & vbLf & _
+                "Script will be closed!", vbOKOnly + vbCritical, "   Cancel   "
+        goExit = True
+        Exit Function
+    End If
+    
+    Set linkedDocument = drawingView.GenerativeBehavior.document.ReferenceProduct.Parent
+    
+    '--> Suchen des gelinkten Dokuments / beinhaltenden Dokuments
+    Dim linkedDocumentParent As Object
+    Dim linkedDocumentParentParent As Object
+    
+    Set linkedDocumentParent = linkedProduct.Parent
+    Set linkedDocumentParentParent = linkedDocumentParent.Parent
+    
+    Do Until TypeName(linkedDocumentParentParent) = "Application"
+        Set linkedDocumentParent = linkedDocumentParentParent
+        Set linkedDocumentParentParent = linkedDocumentParent.Parent
+    Loop
+    
+    Set linkedDocument = linkedDocumentParent
+    
+    'MsgBox linkedDocument.name
+    
+    Dim linkedDocumentOpened As Boolean
+    linkedDocumentOpened = False
+    I = 1
+    For I = 1 To CATIA.Windows.Count
+        If CATIA.Windows.Item(I).name = linkedDocument.name Then
+            linkedDocumentOpened = True
+            Set spaceWindow = CATIA.Windows.Item(I)
+            Exit For
+        End If
+    Next
+    
+    If (Not linkedDocumentOpened) Then
+        CATIA.Documents.Open (linkedDocument.FullName)
+        Set spaceWindow = CATIA.ActiveWindow
+        'drawingWindow.Activate
+        'drawingDocument.Activate
+    End If
+    
+    '--> Referenz-Achsensystem im 3D
+    Dim oProduct As Variant
+    Dim oAxis As Variant
+    
+    'drawingView.GenerativeBehavior.GetAxisSysteme oProduct, oAxis '>>Methode failed
+    
+    ReDim linkedProducts(1)
+    Set linkedProducts(1) = drawingView.GenerativeLinks.FirstLink
+    
+    Dim moreLinks As Boolean
+    moreLinks = True
+    Dim tabString As String
+    tabString = linkedProducts(1).name & vbLf
+    
+    I = 2
+    
+    Do Until moreLinks = False
+        
+        On Error Resume Next
+        ReDim Preserve linkedProducts(I)
+        Set linkedProducts(I) = drawingView.GenerativeLinks.NextLink()
+        If Err = 0 Then
+            On Error GoTo 0
+            tabString = tabString & linkedProducts(I).name & vbLf
+            I = I + 1
+        Else
+            On Error GoTo 0
+            I = I - 1
+            ReDim Preserve linkedProducts(I)
+            moreLinks = False
+        End If
+        
+    Loop
+    
+    '--> Nullpunkt View-Achsensystem im 3D bestimmen
+    '       - nur ein Part/gesamtes_Product abgebildet -> 3D-Null gleich Part-/Product-Null
+    '       - mehrere (einzeln gewaehlte) Parts abgebildet -> 3D-Null gleich Product-Null
+    Dim axisReferenceProduct As Product
+    
+    Dim oViewFirstVector(2) As Variant 'Double
+    Dim oViewSecondVector(2) As Variant 'Double
+    Dim oViewNormalVector(2) As Variant 'Double
+    'roundTolerance = (1E+15 / 100000000) '/ 1000)
+    
+    drawingView.GenerativeBehavior.GetProjectionPlane oViewFirstVector(0), oViewFirstVector(1), oViewFirstVector(2), _
+                                                        oViewSecondVector(0), oViewSecondVector(1), oViewSecondVector(2)
+    
+    drawingView.GenerativeBehavior.GetProjectionPlaneNormal oViewNormalVector(0), oViewNormalVector(1), oViewNormalVector(2)
+    
+    'MsgBox "Link zu Document:  " & linkedDocument.name & vblf & vblf & _
+    '        "Ausrichtung zu:  " & drawingView.GenerativeBehavior.document.name & vblf & vblf & _
+    '        "First Vektor:  " & oViewFirstVector(0) & " ; " & oViewFirstVector(1) & " ; " & oViewFirstVector(2) & vblf & vblf & _
+    '        "Second Vektor:  " & oViewSecondVector(0) & " ; " & oViewSecondVector(1) & " ; " & oViewSecondVector(2)
+    
+    If I = 1 Then
+        Set axisReferenceProduct = linkedDocument.Product
+    Else
+        Set axisReferenceProduct = drawingView.GenerativeBehavior.document
+        
+        '--> Berechnung der absoluten View-Vektoren
+        Dim iVector As Variant
+        Dim absoluteMatrix(11) As Variant
+        
+        GetAbsoluteCoordinates axisReferenceProduct, linkedDocument.Product, absoluteMatrix
+        
+        iVector = oViewFirstVector
+        oViewFirstVector(0) = iVector(0) * absoluteMatrix(0) + iVector(1) * absoluteMatrix(3) + iVector(2) * absoluteMatrix(6)
+        oViewFirstVector(1) = iVector(0) * absoluteMatrix(1) + iVector(1) * absoluteMatrix(4) + iVector(2) * absoluteMatrix(7)
+        oViewFirstVector(2) = iVector(0) * absoluteMatrix(2) + iVector(1) * absoluteMatrix(5) + iVector(2) * absoluteMatrix(8)
+        
+        iVector = oViewSecondVector
+        oViewSecondVector(0) = iVector(0) * absoluteMatrix(0) + iVector(1) * absoluteMatrix(3) + iVector(2) * absoluteMatrix(6)
+        oViewSecondVector(1) = iVector(0) * absoluteMatrix(1) + iVector(1) * absoluteMatrix(4) + iVector(2) * absoluteMatrix(7)
+        oViewSecondVector(2) = iVector(0) * absoluteMatrix(2) + iVector(1) * absoluteMatrix(5) + iVector(2) * absoluteMatrix(8)
+        
+        iVector = oViewNormalVector
+        oViewNormalVector(0) = iVector(0) * absoluteMatrix(0) + iVector(1) * absoluteMatrix(3) + iVector(2) * absoluteMatrix(6)
+        oViewNormalVector(1) = iVector(0) * absoluteMatrix(1) + iVector(1) * absoluteMatrix(4) + iVector(2) * absoluteMatrix(7)
+        oViewNormalVector(2) = iVector(0) * absoluteMatrix(2) + iVector(1) * absoluteMatrix(5) + iVector(2) * absoluteMatrix(8)
+        
+    End If
+    
+    RoundVector oViewFirstVector, roundTolerance, viewFirstVector
+    RoundVector oViewSecondVector, roundTolerance, viewSecondVector
+    RoundVector oViewNormalVector, roundTolerance, viewNormalVector
+    
+    If debugMode Then
+        MsgBox "Link zu Document:  " & linkedDocument.name & vbLf & vbLf & _
+                "FirstLink zu:  " & drawingView.GenerativeBehavior.document.name & vbLf & vbLf & _
+                "Ausrichtung zu:  " & axisReferenceProduct.name & vbLf & vbLf & _
+                "FirstVektor:  " & viewFirstVector(0) & " ; " & viewFirstVector(1) & " ; " & viewFirstVector(2) & vbLf & vbLf & _
+                "SecondVektor:  " & viewSecondVector(0) & " ; " & viewSecondVector(1) & " ; " & viewSecondVector(2) & vbLf & vbLf & _
+                "NormalVektor:  " & viewNormalVector(0) & " ; " & viewNormalVector(1) & " ; " & viewNormalVector(2)
+    End If
+    
+End Function
+
+
+'--> Bestimmen der absoluten Koordinaten eines Punktes/Vektors
+'       Inputs:  -Object(Parent) des Punktes/Vektors
+'                -Type des Objectes ("hole", "point", "vector")
+'       Outputs: -absoluter Punkt/Vector (Array(2))
+Public Sub GetAbsolutePointCoordinates(ByVal iObject, ByVal insideProduct, ByVal oType, ByRef absPoint)
+
+    Dim rootProduct As Product
+    Set rootProduct = CATIA.ActiveDocument.Product
+    
+    Dim pointInPart(2)
+    'Dim absPoint(2)
+    
+    Select Case LCase(oType)
+        
+        Case "hole"
+            iObject.GetOrigin pointInPart
+            
+        Case "point"
+            iObject.GetCoordinates pointInPart
+            
+        Case "vector"
+            iObject.GetDirection pointInPart
+            
+            'Dim iVector(2)
+            'iObject.GetDirection iVector
+            'iObject.GetOrigin pointInPart
+            
+            'pointInPart(0) = pointInPart(0) * iVector(0)
+            'pointInPart(1) = pointInPart(1) * iVector(1)
+            'pointInPart(2) = pointInPart(2) * iVector(2)
+        Case "product"
+            pointInPart(0) = 0
+            pointInPart(1) = 0
+            pointInPart(2) = 0
+        
+        Case Else
+            Exit Sub
+        
+    End Select
+    
+    Dim absoluteMatrix(11) As Variant
+    
+    GetAbsoluteCoordinates insideProduct, rootProduct, absoluteMatrix
+    
+    absPoint(0) = pointInPart(0) * absoluteMatrix(0) + pointInPart(1) * absoluteMatrix(3) + pointInPart(2) * absoluteMatrix(6) + absoluteMatrix(9)
+    absPoint(1) = pointInPart(0) * absoluteMatrix(1) + pointInPart(1) * absoluteMatrix(4) + pointInPart(2) * absoluteMatrix(7) + absoluteMatrix(10)
+    absPoint(2) = pointInPart(0) * absoluteMatrix(2) + pointInPart(1) * absoluteMatrix(5) + pointInPart(2) * absoluteMatrix(8) + absoluteMatrix(11)
+    
+    If LCase(oType) = "vector" Then
+        
+        absPoint(0) = pointInPart(0) * absoluteMatrix(0) + pointInPart(1) * absoluteMatrix(3) + pointInPart(2) * absoluteMatrix(6)
+        absPoint(1) = pointInPart(0) * absoluteMatrix(1) + pointInPart(1) * absoluteMatrix(4) + pointInPart(2) * absoluteMatrix(7)
+        absPoint(2) = pointInPart(0) * absoluteMatrix(2) + pointInPart(1) * absoluteMatrix(5) + pointInPart(2) * absoluteMatrix(8)
+        
+    End If
+    
+    
+    'MsgBox absPoint(0) & ";" & absPoint(1) & ";" & absPoint(2)
+    
+End Sub
+
+
+' --> Matrizen-Multiplikation (Reihenfolge NICHT ohne Auswirkung!!!)
+Public Function MatrixProduct(ByVal matrix1, ByVal matrix2, ByRef c) 'matrix3)
+    
+    Dim a 'As Variant
+    Dim b 'As Variant
+    'Dim c(11)
+    
+    a = matrix1
+    b = matrix2
+   
+    c(0) = a(0) * b(0) + a(1) * b(3) + a(2) * b(6)
+    c(3) = a(3) * b(0) + a(4) * b(3) + a(5) * b(6)
+    c(6) = a(6) * b(0) + a(7) * b(3) + a(8) * b(6)
+    c(1) = a(0) * b(1) + a(1) * b(4) + a(2) * b(7)
+    c(4) = a(3) * b(1) + a(4) * b(4) + a(5) * b(7)
+    c(7) = a(6) * b(1) + a(7) * b(4) + a(8) * b(7)
+    c(2) = a(0) * b(2) + a(1) * b(5) + a(2) * b(8)
+    c(5) = a(3) * b(2) + a(4) * b(5) + a(5) * b(8)
+    c(8) = a(6) * b(2) + a(7) * b(5) + a(8) * b(8)
+    c(9) = a(9) * b(0) + a(10) * b(3) + a(11) * b(6) + b(9)
+    c(10) = a(9) * b(1) + a(10) * b(4) + a(11) * b(7) + b(10)
+    c(11) = a(9) * b(2) + a(10) * b(5) + a(11) * b(8) + b(11)
+    
+    'Dim matrix3 As Variant
+    'matrix3 = c
+    
+End Function
+
+
+'--> Bestimmung der absoluten Position eines Products
+'       Inputs:  -Product, von dem Position zu bestimmen (subProduct)
+'                -Product, zu dem Position zu bestimmen (activeProduct)
+'       Outputs: -Transformations-Matrix um subProduct in gleicher absoluter Lage
+'                 direkt unter activeProduct zu positionieren
+Public Function GetAbsoluteCoordinates(ByVal subProduct, ByVal activeProduct, ByRef coordMatrix)
+
+  'Dim coordMatrix(11)
+  If (subProduct.name = activeProduct.name) Then
+    coordMatrix(0) = 1
+    coordMatrix(1) = 0
+    coordMatrix(2) = 0
+    coordMatrix(3) = 0
+    coordMatrix(4) = 1
+    coordMatrix(5) = 0
+    coordMatrix(6) = 0
+    coordMatrix(7) = 0
+    coordMatrix(8) = 1
+    coordMatrix(9) = 0
+    coordMatrix(10) = 0
+    coordMatrix(11) = 0
+  Else
+    Dim relativPosition(11) As Variant
+    Dim absolutePosition(11) As Variant
+    subProduct.position.GetComponents relativPosition
+    GetAbsoluteCoordinates subProduct.Parent.Parent, activeProduct, absolutePosition
+    MatrixProduct relativPosition, absolutePosition, coordMatrix
+  End If
+
+End Function
+
+
+'--> Runden eines Vektors mit vorgegebener Genauigkeit
+Public Function RoundVector(ByVal iVector, ByVal roundTolerance, ByRef oVector)
+    
+    'Dim roundVector(2)
+    
+    oVector(0) = Round(iVector(0) * roundTolerance, 0) / roundTolerance
+    oVector(1) = Round(iVector(1) * roundTolerance, 0) / roundTolerance
+    oVector(2) = Round(iVector(2) * roundTolerance, 0) / roundTolerance
+
+End Function
+
+
+'--> Matrizen-Inversion
+Public Function MatrixInverse(ByVal matrix, ByRef inverse)
+
+  Dim a(11)
+  Dim I As Integer
+  For I = 0 To 11
+    a(I) = matrix(I)
+  Next
+  
+  inverse(0) = a(4) * a(8) - a(7) * a(5)
+  inverse(1) = a(2) * a(7) - a(8) * a(1)
+  inverse(2) = a(1) * a(5) - a(4) * a(2)
+  inverse(3) = a(5) * a(6) - a(8) * a(3)
+  inverse(4) = a(0) * a(8) - a(6) * a(2)
+  inverse(5) = a(2) * a(3) - a(5) * a(0)
+  inverse(6) = a(3) * a(7) - a(6) * a(4)
+  inverse(7) = a(1) * a(6) - a(7) * a(0)
+  inverse(8) = a(0) * a(4) - a(1) * a(3)
+  inverse(9) = -(a(9) * inverse(0) + a(10) * inverse(3) + a(11) * inverse(6))
+  inverse(10) = -(a(9) * inverse(1) + a(10) * inverse(4) + a(11) * inverse(7))
+  inverse(11) = -(a(9) * inverse(2) + a(10) * inverse(5) + a(11) * inverse(8))
+
+End Function
+
+
+'--> Dezimaltrennzeichen-Korrektur fuer Parameteruebernahme aus Text-Strings
+Public Function CorrectDecimal(ByRef doubleParam As String) As String
+    
+    If (Not ((InStr(doubleParam, ".") > 0 Or InStr(doubleParam, ",") > 0) And (InStr(CStr(CDbl(doubleParam)), ".") > 0 Or InStr(CStr(CDbl(doubleParam)), ",") > 0))) Then
+        doubleParam = Replace(doubleParam, ",", ".")
+        If (Not ((InStr(doubleParam, ".") > 0 Or InStr(doubleParam, ",") > 0) And (InStr(CStr(CDbl(doubleParam)), ".") > 0 Or InStr(CStr(CDbl(doubleParam)), ",") > 0))) Then
+            doubleParam = Replace(doubleParam, ".", ",")
+        End If
+    End If
+    
+    CorrectDecimal = doubleParam
+    
+End Function
+
+
+'-->Erzeugung des Gitternetz-Details und einsetzen in aktive View
+Public Function NetDetailCreate(ByVal first2DCoordAbs, ByVal second2DCoordAbs, ByVal componentAngle, ByVal netLines, ByVal netInvert)
+    
+    Dim minSelH As Double
+    Dim minSelV As Double
+    Dim maxSelH As Double
+    Dim maxSelV As Double
+    Dim minH As Double
+    Dim minV As Double
+    Dim maxH As Double
+    Dim maxV As Double
+    
+    If first2DCoordAbs(0) < second2DCoordAbs(0) Then
+        minSelH = first2DCoordAbs(0)
+        maxSelH = second2DCoordAbs(0)
+    Else
+        maxSelH = first2DCoordAbs(0)
+        minSelH = second2DCoordAbs(0)
+    End If
+    
+    If first2DCoordAbs(1) < second2DCoordAbs(1) Then
+        minSelV = first2DCoordAbs(1)
+        maxSelV = second2DCoordAbs(1)
+    Else
+        maxSelV = first2DCoordAbs(1)
+        minSelV = second2DCoordAbs(1)
+    End If
+    
+    'raster = 50
+    'textPosH = "catMiddleLeft"
+    'textPosV = "catBottomCenter"
+    'textFontSize = 7.5
+    'textdistH = 3 * textFontSize
+    'textdistV = 1 * textFontSize
+    
+    minH = (Fix(minSelH / raster) - 0.5 + (Sgn(minSelH) * 0.5)) * raster
+    maxH = (Fix(maxSelH / raster) + 0.5 + (Sgn(maxSelH) * 0.5)) * raster
+    minV = (Fix(minSelV / raster) - 0.5 + (Sgn(minSelV) * 0.5)) * raster
+    maxV = (Fix(maxSelV / raster) + 0.5 + (Sgn(maxSelV) * 0.5)) * raster
+        
+    Dim drawingTexts As drawingTexts
+    Dim drawingText As drawingText
+    Dim LMC As Currency
+    Dim textPosAngle As Double
+    
+    Set drawingTexts = netDetail.Texts
+    textPosAngle = componentAngle + drawingView.Angle
+    textPosAngle = textPosAngle - Fix((textPosAngle / (2 * PI)))
+    
+    Dim posH As Double
+    Dim posV As Double
+    Dim netLineAngle As Double
+    
+    
+    If (textPosAngle < (PI / 4)) Or (textPosAngle > (PI * 7 / 4)) Then
+        netLineAngle = 0
+        If (textPosH = "left") Then
+            posH = (minH - (raster / 5)) - (textDistH / drawingView.Scale2)
+        ElseIf (textPosH = "right") Then
+            posH = (maxH + (raster / 5)) + (textDistH / drawingView.Scale2)
+        End If
+        
+        If (textPosV = "bottom") Then
+            If netInvert = -1 Then
+                posV = (maxV + (raster / 5)) + (textDistV / drawingView.Scale2)
+            Else
+                posV = (minV - (raster / 5)) - (textDistV / drawingView.Scale2)
+            End If
+        ElseIf (textPosV = "top") Then
+            If netInvert = -1 Then
+                posV = (minV - (raster / 5)) - (textDistV / drawingView.Scale2)
+            Else
+                posV = (maxV + (raster / 5)) + (textDistV / drawingView.Scale2)
+            End If
+        End If
+    ElseIf (textPosAngle < (PI * 3 / 4)) Then
+        netLineAngle = -(PI / 2)
+        If (textPosV = "top") Then
+            posH = (maxH + (raster / 5)) + (textDistV / drawingView.Scale2)
+        ElseIf (textPosV = "bottom") Then
+            posH = (minH - (raster / 5)) - (textDistV / drawingView.Scale2)
+        End If
+        
+        If (textPosH = "left") Then
+            If netInvert = -1 Then
+                posV = (minV - (raster / 5)) - (textDistH / drawingView.Scale2)
+            Else
+                posV = (maxV + (raster / 5)) + (textDistH / drawingView.Scale2)
+            End If
+        ElseIf (textPosH = "right") Then
+            If netInvert = -1 Then
+                posV = (maxV + (raster / 5)) + (textDistH / drawingView.Scale2)
+            Else
+                posV = (minV - (raster / 5)) - (textDistH / drawingView.Scale2)
+            End If
+        End If
+    ElseIf (textPosAngle < (PI * 5 / 4)) Then
+        netLineAngle = -PI
+        If (textPosH = "right") Then
+            posH = (minH - (raster / 5)) - (textDistH / drawingView.Scale2)
+        ElseIf (textPosH = "left") Then
+            posH = (maxH + (raster / 5)) + (textDistH / drawingView.Scale2)
+        End If
+        
+        If (textPosV = "top") Then
+            If netInvert = -1 Then
+                posV = (maxV + (raster / 5)) + (textDistV / drawingView.Scale2)
+            Else
+                posV = (minV - (raster / 5)) - (textDistV / drawingView.Scale2)
+            End If
+        ElseIf (textPosV = "bottom") Then
+            If netInvert = -1 Then
+                posV = (minV - (raster / 5)) - (textDistV / drawingView.Scale2)
+            Else
+                posV = (maxV + (raster / 5)) + (textDistV / drawingView.Scale2)
+            End If
+        End If
+    Else
+        netLineAngle = -(PI * 3 / 2)
+        If (textPosV = "bottom") Then
+            posH = (maxH + (raster / 5)) + (textDistV / drawingView.Scale2)
+        ElseIf (textPosV = "top") Then
+            posH = (minH - (raster / 5)) - (textDistV / drawingView.Scale2)
+        End If
+        
+        If (textPosH = "right") Then
+            If netInvert = -1 Then
+                posV = (minV - (raster / 5)) - (textDistH / drawingView.Scale2)
+            Else
+                posV = (maxV + (raster / 5)) + (textDistH / drawingView.Scale2)
+            End If
+        ElseIf (textPosH = "left") Then
+            If netInvert = -1 Then
+                posV = (maxV + (raster / 5)) + (textDistH / drawingView.Scale2)
+            Else
+                posV = (minV - (raster / 5)) - (textDistH / drawingView.Scale2)
+            End If
+        End If
+    End If
+    
+    For I = minH To maxH Step raster
+        netDetail.Factory2D.CreateLine I, minV - (raster / 5), I, maxV + (raster / 5)
+        'iSel.Clear
+        'iSel.Add netDetail.GeometricElements.Item(netDetail.GeometricElements.Count)
+        'iSel.VisProperties.SetVisibleWidth 1, 1
+        'iSel.Clear
+        Set drawingText = drawingTexts.Add(descriptionH & CStr(I), I, posV)
+        drawingText.AnchorPosition = catMiddleCenter
+        drawingText.SetFontSize 0, 0, textFontSize
+        drawingText.Angle = ((textPosAngle + netLineAngle) * 180 / PI)
+    Next
+    
+    If netLines = 2 Then
+        For I = minV To maxV Step raster
+            netDetail.Factory2D.CreateLine minH - (raster / 5), I, maxH + (raster / 5), I
+            'iSel.Clear
+            'iSel.Add netDetail.GeometricElements.Item(netDetail.GeometricElements.Count)
+            'iSel.VisProperties.SetVisibleWidth 1, 1
+            'iSel.Clear
+            Set drawingText = drawingTexts.Add(descriptionV & CStr(I), posH, I)
+            drawingText.AnchorPosition = catMiddleCenter
+            drawingText.SetFontSize 0, 0, textFontSize
+            drawingText.Angle = ((textPosAngle + netLineAngle) * 180 / PI)
+        Next
+    End If
+    
+    If debugMode Then
+        netDetail.Factory2D.CreateLine first2DCoordAbs(0), first2DCoordAbs(1), first2DCoordAbs(0), second2DCoordAbs(1)
+        netDetail.Factory2D.CreateLine first2DCoordAbs(0), second2DCoordAbs(1), second2DCoordAbs(0), second2DCoordAbs(1)
+        netDetail.Factory2D.CreateLine second2DCoordAbs(0), second2DCoordAbs(1), second2DCoordAbs(0), first2DCoordAbs(1)
+        netDetail.Factory2D.CreateLine second2DCoordAbs(0), first2DCoordAbs(1), first2DCoordAbs(0), first2DCoordAbs(1)
+    End If
+    
+    I = 1
+    For I = 1 To drawingTexts.Count
+        drawingTexts.Item(I).name = textPrefix & drawingTexts.Item(I).name
+    Next
+    
+    I = 1
+    For I = 1 To netDetail.GeometricElements.Count
+        netDetail.GeometricElements.Item(I).name = textPrefix & netDetail.GeometricElements.Item(I).name
+    Next
+    
+End Function
+
+
+'--> Eingabe-Routine fuer ParameterWerte
+Public Function InputParameter(ByRef parmValue, ByVal parmName As String, ByVal requestInput As Boolean)
+    
+    'Dim inputString As String
+    inputString = ""
+    'Dim msgInput As String
+    Do While inputString = ""
+        '--> EingabeBox entsprechend konfigurieren
+        inputString = InputBox(parmName & " = ", "    Input   ", CStr(parmValue))
+        If (inputString <> "") And (TypeName(parmValue) = "Double") Then
+            On Error Resume Next
+            inputString = CStr(CDbl(inputString))
+            If Err <> 0 Then
+                inputString = ""
+            End If
+            On Error GoTo 0
+        ElseIf (inputString <> "") And (TypeName(parmValue) = "Integer") Then
+            On Error Resume Next
+            inputString = CStr(CInt(inputString))
+            If Err <> 0 Then
+                inputString = ""
+            End If
+            On Error GoTo 0
+        ElseIf inputString <> "" Then
+            If requestInput Then
+                On Error Resume Next
+                '--> Anzeige Eingabe oder Verarbeitung Eingabe
+                msgInput = MsgBox("'" & parmName & "' = " & inputString & vbLf & vbLf & _
+                                    "Input correct?", vbYesNo + vbQuestion, "    Value of Input   ")
+                On Error GoTo 0
+                If msgInput = vbYes Then Exit Do
+                inputString = ""
+            End If
+        Else
+            msgInput = MsgBox("Empty input or cancel(ESC)" & vbLf & vbLf & _
+                            "Really exit script?", vbYesNo + vbExclamation, "   Exit ?   ")
+            If msgInput = vbYes Then
+                goExit = True
+                Exit Do
+            End If
+            inputString = ""
+        End If
+    Loop
+    
+    If goExit Then Exit Function
+    
+    If TypeName(parmValue) = "String" Then
+        parmValue = inputString
+    Else
+        
+        parmValue = CorrectDecimal(inputString)
+    End If
+    
+    InputParameter = parmValue
+    
+End Function
+
+
+'--> Modifikation der Standards
+Public Function SetStandards(ByRef standards)
+    
+    '--> Makro-Default der Standards
+    ReDim netColor(2)
+    netColor(0) = standards(0)
+    netColor(1) = standards(1)
+    netColor(2) = standards(2)
+    raster = standards(3)
+    textPosH = standards(4)
+    textPosV = standards(5)
+    textFontSize = standards(6)
+    textDistH = standards(7)
+    textDistV = standards(8)
+    
+    goExit = False
+    
+    '--> Modifikation der Standards
+    msgInput = vbNo
+    Do Until msgInput = vbYes
+        If CLng(netColor(0)) = 16 And CLng(netColor(1)) = 3 And CLng(netColor(2)) = 67 Then
+            netColorName = "KUKA-Default (blueblack)"
+        Else
+            netColorName = "User defined   (" & netColor(0) & "," & netColor(1) & "," & netColor(2) & ")"
+        End If
+        'msgInput = MsgBox("Do you want to use the following settings?" & vbLf & vbLf & _
+                            '"Color of NET:    ' " & netColorName & " ' " & vbLf & _
+                            '"Net spacing (mm):    ' " & raster & " ' " & vbLf & _
+                            '"Text position horizontal:    ' " & textPosH & " ' " & vbLf & _
+                            '"Text position vertical:    ' " & textPosV & " ' " & vbLf & _
+                            '"Height of text (mm):    ' " & textFontSize & " ' " & vbLf & _
+                            '"Text distance horizontal:    ' " & (textDistH / textFontSize) & " * Height_of_text ' " & vbLf & _
+                            '"Text distance vertical:    ' " & (textDistV / textFontSize) & " * Height_of_text ' ", _
+                            'vbYesNo + vbQuestion, "   Used Settings   ")
+                            
+                            '"Color of net (R,G,B):    ' " & netColor(0) & " , " & netColor(1) & " , " & netColor(2) & " ' " & vblf & _
+
+        msgInput = MsgBox("Do you want to use the following settings?" & vbLf & vbLf & _
+                            "Net spacing (mm):    ' " & raster & " ' " & vbLf & _
+                            "Text position horizontal:    ' " & textPosH & " ' " & vbLf & _
+                            "Text position vertical:    ' " & textPosV & " ' " & vbLf & _
+                            "Height of text (mm):    ' " & textFontSize & " ' ", _
+                            vbYesNo + vbQuestion, "   Used Settings   ")
+
+        If msgInput = vbNo Then
+            '--> Setzen der neuen Werte
+            inputTextDistH = textDistH / textFontSize
+            inputTextDistV = textDistV / textFontSize
+            
+            '--> Abfrage Color: input oder from_element
+            'msgInput = MsgBox("Use color fom existing element?" & vbLf & vbLf & _
+            '                "(Alternative insert the values of the color (R,G,B)!)", vbYesNo + vbQuestion, "   Color: Selection / (R,G,B)   ")
+            'If msgInput = vbYes Then
+                'ReDim sFilter(0)
+                'sFilter(0) = "AnyObject"
+                'MsgBox "Select element with the color do you want!", _
+                '        vbOKOnly, "   Insert-Hint   "
+                'Set iSel = CATIA.ActiveDocument.Selection
+                'iSel.Clear
+                'iStatus = iSel.SelectElement2(sFilter, "Select an element", False)
+                'If (iStatus = "Cancel") Then
+                '    MsgBox "Wrong Selection (e.g. Change of Sheet) or Cancel(ESC)!" & vbLf & vbLf & _
+                '            "Script will be closed!!!", vbOKOnly + vbCritical, "   Cancel   "
+                '    goExit = True
+                '    Exit Do
+                'End If
+                'netRed = CLng(netColor(0))
+                'netGreen = CLng(netColor(1))
+                'netBlue = CLng(netColor(2))
+                'iSel.VisProperties.GetVisibleColor netRed, netGreen, netBlue
+                'netColor(0) = CStr(netRed)
+                'netColor(1) = CStr(netGreen)
+                'netColor(2) = CStr(netBlue)
+                'msgInput = vbNo
+            'Else
+                'netColorString = (netColor(0) & "," & netColor(1) & "," & netColor(2))
+                'InputParameter netColorString, "NET: value of color (R,G,B)", False
+                'If goExit Then Exit Do
+                'On Error Resume Next
+                'If CInt(Left(netColorString, InStr(netColorString, ",") - 1)) >= 0 And _
+                '        CInt(Left(netColorString, InStr(netColorString, ",") - 1)) < 256 Then
+                '    netColor(0) = CLng(Left(netColorString, InStr(netColorString, ",") - 1))
+                'End If
+                'If CInt(Mid(netColorString, InStr(netColorString, ",") + 1, (InStrRev(netColorString, ",") - InStr(netColorString, ",")) - 1)) >= 0 And _
+                '        CInt(Mid(netColorString, InStr(netColorString, ",") + 1, (InStrRev(netColorString, ",") - InStr(netColorString, ",")) - 1)) < 256 Then
+                '    netColor(1) = CLng(Mid(netColorString, InStr(netColorString, ",") + 1, (InStrRev(netColorString, ",") - InStr(netColorString, ",")) - 1))
+                'End If
+                'If CInt(Right(netColorString, Len(netColorString) - InStrRev(netColorString, ","))) >= 0 And _
+                '        CInt(Right(netColorString, Len(netColorString) - InStrRev(netColorString, ","))) < 256 Then
+                '    netColor(2) = CLng(Right(netColorString, Len(netColorString) - InStrRev(netColorString, ",")))
+                'End If
+                'On Error GoTo 0
+            'End If
+            'If goExit Then Exit Do
+            inputBoolean = False
+            Do Until inputBoolean
+                InputParameter raster, "NET spacing (mm)", False
+                If CStr(CInt(raster)) = raster And CInt(raster) > 0 Then
+                    inputBoolean = True
+                ElseIf goExit Then
+                    Exit Do
+                End If
+            Loop
+            If goExit Then Exit Do
+            inputBoolean = False
+            Do Until inputBoolean
+            InputParameter textPosH, "Text position horizontal (left/right)", False
+                If (LCase(textPosH) = "left") Or (LCase(textPosH) = "right") Then
+                    inputBoolean = True
+                ElseIf goExit Then
+                    Exit Do
+                End If
+            Loop
+            If goExit Then Exit Do
+            inputBoolean = False
+            Do Until inputBoolean
+            InputParameter textPosV, "Text position vertical (top/bottom)", False
+                If (LCase(textPosV) = "top") Or (LCase(textPosV) = "bottom") Then
+                    inputBoolean = True
+                ElseIf goExit Then
+                    Exit Do
+                End If
+            Loop
+            If goExit Then Exit Do
+            inputBoolean = False
+            Do Until inputBoolean
+            InputParameter textFontSize, "Height of text (mm)", False
+                If CStr(CDbl(textFontSize)) = textFontSize Then
+                    inputBoolean = True
+                ElseIf goExit Then
+                    Exit Do
+                End If
+            Loop
+            If goExit Then Exit Do
+            'textDistH = InputParameter(inputTextDistH, "Scale factor 'X' for text distance horizontal (X * Height_of_text)", False) * textFontSize
+            textDistH = inputTextDistH * textFontSize
+            'If goExit Then Exit Do
+            'textDistV = InputParameter(inputTextDistV, "Scale factor 'X' for text distance vertical (X * Height_of_text)", False) * textFontSize
+            textDistV = inputTextDistV * textFontSize
+            'If goExit Then Exit Do
+            
+        End If
+    Loop
+    
+    If goExit Then Exit Function
+    
+    standards(0) = netColor(0)
+    standards(1) = netColor(1)
+    standards(2) = netColor(2)
+    standards(3) = raster
+    standards(4) = textPosH
+    standards(5) = textPosV
+    standards(6) = textFontSize
+    standards(7) = textDistH
+    standards(8) = textDistV
+
+End Function
+
+
+'--> releaseabhaengige Funktion fuer Selection.Count/Count2
+Public Function iSelCount()
+    
+    If CATIA.SystemConfiguration.Release >= "16" Then
+        iSelCount = iSel.Count2
+    Else
+        iSelCount = iSel.Count
+    End If
+    
+End Function
+
+
+'--> releaseabhaengige Funktion fuer Selection.Item/Item2
+Public Function iSelItem(ByVal Num)
+    
+    If CATIA.SystemConfiguration.Release >= "16" Then
+        Set iSelItem = iSel.Item2(Num)
+    Else
+        Set iSelItem = iSel.Item(Num)
+    End If
+    
+End Function
+
+

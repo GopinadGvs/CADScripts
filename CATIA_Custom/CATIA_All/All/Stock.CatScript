@@ -1,0 +1,78 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Set partDocument1 = CATIA.ActiveDocument
+
+Dim selection1 As Selection
+Set selection1 = CATIA.ActiveDocument.Selection
+
+dim thk as string
+
+Set oBodies = partDocument1.Part.Bodies
+Dim j As Integer
+For j = 1 to oBodies.Count
+if oBodies.Item(j).Name = "PartBody" then
+Dim oPartBody As AnyObject
+Set oPartBody = CATIA.ActiveDocument.Part.Bodies.Item("Funktionsteil")
+Dim oShapes As Shapes
+Set oShapes = oPartBody.Shapes
+if (oShapes.Count <> 0) then
+Dim Pad2 As AnyObject
+
+Set Pad2 = oPartBody.Shapes.Item(1)
+
+dim thk1 as double
+thk1 = oPartBody.Shapes.Item(1).FirstLimit.Dimension.Value
+
+dim thk2 as double
+thk2 = oPartBody.Shapes.Item(1).SecondLimit.Dimension.Value
+
+dim thk3 as double
+thk3 = thk1 + thk2
+
+Set sketches1 = oPartBody.Sketches
+
+Set sketch1 = sketches1.Item(1)
+
+Set constraints1 = sketch1.Constraints
+
+dim stk as string
+
+For i = 1 To constraints1.Count
+
+If (constraints1.Item(i).Type = 5 or constraints1.Item(i).Type = 1 ) Then
+
+selection1.Clear
+selection1.Add constraints1.Item(i)
+
+Set visPropertySet1 = selection1.VisProperties
+
+Dim r, g, b
+
+r = CLng(0)
+g = CLng(0)
+b = CLng(0)
+
+visPropertySet1.GetRealColor r, g, b
+
+If (r = 255 And g = 255 And b = 0) Then
+
+stk = stk & "X" & constraints1.Item(i).Dimension.Value
+
+End If
+
+End If
+
+Next
+
+else
+msgbox "no shapes"
+end if
+
+end if
+next
+
+msgbox(thk3 & stk)
+
+End Sub

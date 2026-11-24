@@ -1,0 +1,45 @@
+'Program By GopinadhGvs Dt. 23-11-2018
+'To Add parameters of Selected Parts
+'Program By GopinadhGvs _A01_ Dt. 26-11-2021_
+
+'option explicit
+Sub CATMain()
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+
+Dim productDocument1 As Document
+
+Set productDocument1 = CATIA.ActiveDocument
+
+Dim product1 As Product
+Set product1 = productDocument1.Product
+
+Dim constraints1 As Collection
+Set constraints1 = product1.Connections("CATIAConstraints")
+
+Dim constraint1 As Constraint
+'Set constraint1 = constraints1.Item("Fix.636")
+
+Dim sel as Selection
+'Dim prod1 as string
+set sel=CATIA.ActiveDocument.Selection
+
+Dim i as integer
+i = 1
+
+For i = 1 to sel.Count
+
+
+'set prod1=sel.Item(i).Value.Name
+
+'msgbox(sel.Item(i).Value.Name)
+
+Set constraint1 = constraints1.Item(sel.Item(i).Value.Name)
+
+constraint1.ReferenceType = catCstRefTypeFixInSpace
+
+Next
+
+End Sub

@@ -1,0 +1,57 @@
+Language="VBSCRIPT"
+Sub CATMain()
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Set objFile = objFSO.OpenTextFile("C:\Users\vsguddanti\Desktop\Path.txt", 1)
+
+
+Dim objShell
+	Dim strPath
+	Set objShell = CreateObject("Wscript.Shell")
+	strPath = objShell.SpecialFolders("Desktop")
+	
+	
+	strFilePath = strPath & "\Date.csv"
+	
+	On Error Resume Next
+	Set obj = CreateObject("Scripting.FileSystemObject")
+	obj.DeleteFile(strFilePath)
+	on Error goto 0
+	
+	Set objFSO = CreateObject("Scripting.FileSystemObject")
+	Set objStream = objFSO.OpenTextFile(strFilePath, 8, True, 0)
+	REM objStream.WriteLine("Part,Nomenclature")
+
+
+
+Do While objFile.AtEndOfStream = False
+strLine = objFile.ReadLine
+
+dim path as string
+
+path = Replace(strLine,"""","")
+Set documents1 = CATIA.Documents
+Set drawingDocument1 = documents1.Open(path)
+
+Set drawingDocument1 = CATIA.ActiveDocument
+
+Set parameters1 = drawingDocument1.Parameters
+
+Set strParam1 = parameters1.Item("Erstelldatum")
+
+
+objStream.WriteLine(CATIA.ActiveDocument.FullName & "," & strParam1.Value)
+'objFile.Close
+
+drawingDocument1.Close
+
+Loop
+
+
+dim WshShell
+	set WshShell = CreateObject("WScript.Shell")
+	WshShell.Run strFilePath
+
+REM objFile.Close
+
+End Sub

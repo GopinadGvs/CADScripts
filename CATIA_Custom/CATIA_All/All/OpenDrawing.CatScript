@@ -1,0 +1,106 @@
+Language="VBSCRIPT"
+Sub CATMain()
+
+Dim path1 as String
+path1 = CATIA.ActiveDocument.FullName
+'path1 ="V:\VW380_SVHL\3D FINISH\3070\ST3070 3D FINISH\ST-38H858265"
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+
+'msgbox(path1)
+
+'set files1 = objFSO.Getfolder(path1)
+
+set file = objFSO.Getfile(path1)
+
+'msgbox(file.Name)
+'msgbox(file.Path)
+'msgbox(Left(file.Path, len(file.Path)-len(file.Name)))
+
+'dim path2 as string
+
+'set path2 = Left(file.Path, len(file.Path)-len(file.Name))
+
+set files1 = objFSO.Getfolder(Left(file.Path, len(file.Path)-len(file.Name)-1))
+
+'msgbox(files1.files.count)
+
+
+for each fil in files1.files
+
+dim typ as integer
+typ = InStr(1,fil.name,".CATDrawing",1)
+
+if(typ>1) then
+
+
+Set documents1 = CATIA.Documents
+Set drawingDocument1 = documents1.Open(Left(file.Path, len(file.Path)-len(file.Name)) & fil.name)
+
+REM msgbox(path2 & fil.name)
+REM msgbox(fil.name)
+REM msgbox(Left(file.Path, len(file.Path)-len(file.Name)) & fil.name )
+
+end if
+
+next
+
+
+
+
+
+
+REM Set objFSO = CreateObject("Scripting.FileSystemObject")
+REM Set objFile = objFSO.OpenTextFile("C:\Users\vsguddanti\Desktop\Path.txt", 1)
+
+
+REM Dim objShell
+	REM Dim strPath
+	REM Set objShell = CreateObject("Wscript.Shell")
+	REM strPath = objShell.SpecialFolders("Desktop")
+	
+	
+	REM strFilePath = strPath & "\Date.csv"
+	
+	REM On Error Resume Next
+	REM Set obj = CreateObject("Scripting.FileSystemObject")
+	REM obj.DeleteFile(strFilePath)
+	REM on Error goto 0
+	
+	REM Set objFSO = CreateObject("Scripting.FileSystemObject")
+	REM Set objStream = objFSO.OpenTextFile(strFilePath, 8, True, 0)
+	REM REM objStream.WriteLine("Part,Nomenclature")
+
+
+
+REM Do While objFile.AtEndOfStream = False
+REM strLine = objFile.ReadLine
+
+REM dim path as string
+
+REM path = Replace(strLine,"""","")
+REM Set documents1 = CATIA.Documents
+REM Set drawingDocument1 = documents1.Open(path)
+
+REM Set drawingDocument1 = CATIA.ActiveDocument
+
+REM Set parameters1 = drawingDocument1.Parameters
+
+REM Set strParam1 = parameters1.Item("Erstelldatum")
+
+
+REM objStream.WriteLine(CATIA.ActiveDocument.FullName & "," & strParam1.Value)
+REM 'objFile.Close
+
+REM drawingDocument1.Close
+
+REM Loop
+
+
+REM dim WshShell
+	REM set WshShell = CreateObject("WScript.Shell")
+	REM WshShell.Run strFilePath
+
+REM objFile.Close
+
+End Sub

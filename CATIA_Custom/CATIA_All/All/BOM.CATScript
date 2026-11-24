@@ -1,0 +1,44 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Dim productDocument1 As Document
+Set productDocument1 = CATIA.ActiveDocument
+
+Dim product1 As Product
+Set product1 = productDocument1.Product
+
+Dim assemblyConvertor1 As CATBaseDispatch
+Set assemblyConvertor1 = product1.GetItem("BillOfMaterial")
+
+Dim arrayOfVariantOfBSTR1(5)
+arrayOfVariantOfBSTR1(0) = "Quantity"
+arrayOfVariantOfBSTR1(1) = "Part Number"
+arrayOfVariantOfBSTR1(2) = "Type"
+arrayOfVariantOfBSTR1(3) = "Nomenclature"
+arrayOfVariantOfBSTR1(4) = "Revision"
+arrayOfVariantOfBSTR1(5) = "Positionsnummer"
+assemblyConvertor1.SetCurrentFormat arrayOfVariantOfBSTR1
+
+Dim arrayOfVariantOfBSTR2(3)
+arrayOfVariantOfBSTR2(0) = "Quantity"
+arrayOfVariantOfBSTR2(1) = "Part Number"
+arrayOfVariantOfBSTR2(2) = "Hinweis"
+arrayOfVariantOfBSTR2(3) = "Bestellnummer"
+assemblyConvertor1.SetSecondaryFormat arrayOfVariantOfBSTR2
+
+REM Dim arrayOfVariantOfBSTR2(3)
+REM arrayOfVariantOfBSTR2(0) = "Quantity"
+REM arrayOfVariantOfBSTR2(1) = "Part Number"
+REM arrayOfVariantOfBSTR2(2) = "Hinweis"
+REM arrayOfVariantOfBSTR2(3) = "Bestellnummer"
+REM assemblyConvertor1.SetCurrentFormat arrayOfVariantOfBSTR2
+
+assemblyConvertor1.Print "XLS", "C:\Users\vsguddanti\Desktop\BOM.xls", product1
+
+
+dim WshShell
+	set WshShell = CreateObject("WScript.Shell")
+	WshShell.Run "C:\Users\vsguddanti\Desktop\BOM.xls"
+
+End Sub

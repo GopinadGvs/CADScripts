@@ -1,0 +1,122 @@
+Option Explicit
+
+Sub CATMain()
+
+Dim objFSO, objFile, objTextStram, objShell
+Dim NameZiel, tmpfilename, strLine, strPath, pname
+Dim i, j, k
+
+Dim myprod As ProductDocument
+Set myprod = CATIA.ActiveDocument
+
+Dim prods As Product
+Set prods = myprod.Product
+
+Dim pparam As Parameters
+Set pparam = prods.Parameters
+
+Set objShell = CreateObject("Wscript.Shell")
+    
+strPath = objShell.SpecialFolders("Desktop")
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+
+tmpfilename = strPath & "\Status.txt"
+
+'Set objFile = objFSO.CreateTextFile(tmpfilename, True)
+
+'Set objFSO = CreateObject("Scripting.FileSystemObject")
+Set objFile = objFSO.OpenTextFile(tmpfilename, 2)
+
+'Do While objFile.AtEndOfStream = False
+'strLine = objFile.ReadLine
+
+'Set objFile = objFSO.GetFile(TMPFilename)
+'Set objTextStram = objFile.OpenAsTextStream(1, 0)
+'FileName = objTextStram.ReadAll
+'UserArray = Split(FileName, ";")
+'ComboBox1.AddItem (strLine)
+'Loop
+'objTextStram.Close
+
+
+'For k = 1 To pparam.Count
+
+'If InStr(pparam.Item(k).Name, "Constraints") Then
+
+'objFile.Write "_______"
+'objFile.Write vbNewLine
+'objFile.Write pparam.Item(k).Name
+'objFile.Write vbNewLine
+'objFile.Write pparam.Item(k).ValueAsString
+'objFile.Write vbNewLine
+
+'Debug.Print ("_____________")
+'Debug.Print (pparam.Item(k).Name)
+'Debug.Print (pparam.Item(k).ValueAsString)
+
+'Else
+
+'End If
+
+'Next
+
+
+'objFile.Close
+
+Dim allprods As Product
+Set allprods = prods.Products
+
+
+For i = 1 To prods.Products.Count
+
+'MsgBox ("working")
+'Debug.Print ("_____________")
+'Debug.Print (prods.Products.Item(i).Name)
+'pname = prods.Products.Item(i).Name
+
+Dim constpro As Product
+Set constpro = prods.Products.Item(i)
+
+Dim param As Parameters
+Set param = constpro.Parameters
+
+For j = 1 To param.Count
+
+'MsgBox (param.Count)
+
+If InStr(param.Item(j).Name, "Component Activation State") Then
+
+
+If (param.Item(j).ValueAsString = False) Then
+
+'Debug.Print (constpro.Name)
+'Debug.Print (TypeName(constpro))
+objFile.Write constpro.Name
+objFile.Write vbNewLine
+MsgBox (constpro.Name)
+
+Else
+End If
+
+'Debug.Print ("_____________")
+'Debug.Print (param.Item(j).Name)
+'Debug.Print (param.Item(j).ValueAsString)
+'MsgBox (param.Item(j).ValueAsString)
+
+Else
+
+
+End If
+
+
+
+Next
+
+
+Next
+
+objFile.Close
+
+
+End Sub

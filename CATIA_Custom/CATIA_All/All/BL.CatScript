@@ -1,0 +1,49 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Set partDocument1 = CATIA.ActiveDocument
+
+REM Set part1 = partDocument1.Part
+REM Set bodies1 = part1.Bodies
+REM Set body1 = bodies1.Item("Funktionsteil")
+REM part1.InWorkObject = body1
+REM Set body2 = bodies1.Item("PartBody")
+REM part1.InWorkObject = body2
+
+Set oBodies = partDocument1.Part.Bodies
+' Scan the Bodies collection to determine
+' whether a PartBody feature exists
+' if the PartBody exists - creates two associations
+Dim j As Integer
+For j = 1 to oBodies.Count
+if oBodies.Item(j).Name = "PartBody" then
+' Retrieve the "PartBody" item from the Bodies collection
+Dim oPartBody As AnyObject
+Set oPartBody = CATIA.ActiveDocument.Part.Bodies.Item("Funktionsteil")
+' Check there is at least one shape in the Part
+Dim oShapes As Shapes
+Set oShapes = oPartBody.Shapes
+if (oShapes.Count <> 0) then
+' Retrieve the Pad.1 object
+Dim Pad2 As AnyObject
+
+'On Error Resume Next
+
+Set Pad2 = oPartBody.Shapes.Item(1)
+
+REM Set Pad2 = oPartBody.Shapes.Item("Pad.1")
+Pad2.Name = "BL"
+
+'msgbox Pad2.FirstLimit.Dimension
+
+'On Error goto 0
+
+else
+msgbox "no shapes"
+end if
+
+end if
+next
+
+End Sub

@@ -1,0 +1,169 @@
+'Program By GopinadhGvs Dt. 12-01-2018
+'Program to edit Nomenclature to Filename
+'option explicit
+Sub CATMain()
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+'Dim sel as Selection
+Dim prod1 as Document
+'set sel=CATIA.ActiveDocument.Selection
+
+Set ArrayList = CreateObject("System.Collections.ArrayList") 
+
+
+	Dim objShell
+	Dim strPath
+	Set objShell = CreateObject("Wscript.Shell")
+	strPath = objShell.SpecialFolders("Desktop")
+	
+	
+	strFilePath = strPath & "\Stock.csv"
+	
+	On Error Resume Next
+	Set obj = CreateObject("Scripting.FileSystemObject")
+	obj.DeleteFile(strFilePath)
+	on Error goto 0
+	
+	Set objFSO = CreateObject("Scripting.FileSystemObject")
+	Set objStream = objFSO.OpenTextFile(strFilePath, 8, True, 0)
+	objStream.WriteLine("Part,Stock")
+
+
+
+'Set productDocument1 = CATIA.ActiveDocument
+
+Dim sel as Selection
+'Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+
+Dim kk as integer
+kk = 1
+
+For kk = 1 to sel.Count
+
+set prod1=sel.Item(kk).Value
+
+Dim filenmes as String
+filenmes = prod1.ReferenceProduct.Parent.Name
+
+ArrayList.Add filenmes
+
+Next
+
+
+
+Dim selection1 As Selection
+Set selection1 = CATIA.ActiveDocument.Selection
+
+
+Dim k as integer
+'k = 1
+
+
+For k = 0 to Arraylist.Count-1
+
+Set documents1 = CATIA.Documents
+
+Set partDocument1 = documents1.Item(Arraylist(k))
+
+dim thk as string
+
+Set oBodies = partDocument1.Part.Bodies
+Dim j As Integer
+For j = 1 to oBodies.Count
+if oBodies.Item(j).Name = "PartBody" then
+Dim oPartBody As AnyObject
+Set oPartBody = partDocument1.Part.Bodies.Item("Funktionsteil")
+Dim oShapes As Shapes
+Set oShapes = oPartBody.Shapes
+if (oShapes.Count <> 0) then
+Dim Pad2 As AnyObject
+
+Set Pad2 = oPartBody.Shapes.Item(1)
+
+dim thk1 as double
+thk1 = oPartBody.Shapes.Item(1).FirstLimit.Dimension.Value
+
+dim thk2 as double
+thk2 = oPartBody.Shapes.Item(1).SecondLimit.Dimension.Value
+
+dim thk3 as double
+thk3 = thk1 + thk2
+
+Set sketches1 = oPartBody.Sketches
+
+Set sketch1 = sketches1.Item(1)
+
+Set constraints1 = sketch1.Constraints
+
+dim stk as string
+
+For i = 1 To constraints1.Count
+
+If (constraints1.Item(i).Type = 5 or constraints1.Item(i).Type = 1 ) Then
+
+selection1.Clear
+selection1.Add constraints1.Item(i)
+
+Set visPropertySet1 = selection1.VisProperties
+
+Dim r, g, b
+
+r = CLng(0)
+g = CLng(0)
+b = CLng(0)
+
+visPropertySet1.GetRealColor r, g, b
+
+'If (r = 0 And g = 255 And b = 255) Then
+If (r = 255 And g = 255 And b = 0) Then
+
+stk = stk & "X" & constraints1.Item(i).Dimension.Value
+
+End If
+
+End If
+
+Next
+
+else
+msgbox "no shapes"
+end if
+
+end if
+next
+
+
+'msgbox(thk3 & stk)
+
+
+On Error goto 0
+objStream.WriteLine(Arraylist(k) & "," & thk3 & stk)
+
+stk = ""
+
+REM Dim fullpath as string
+REM fullpath = prod1.ReferenceProduct.Parent.FullName
+
+REM Dim filename as String
+REM filename = prod1.ReferenceProduct.Parent.Name
+REM filename = Replace(filename,".CATPart","")
+REM filename = Replace(filename,".CATProduct","")
+REM prod1.ReferenceProduct.Nomenclature = filename
+
+Next
+
+'dim WshShell
+	set WshShell = CreateObject("WScript.Shell")
+	REM dim strPath as string
+	REM strPath = "explorer.exe /select," & strFilePath
+	REM strPath = "explorer.exe /select," & strFilePath
+	REM WshShell.Run strPath
+	WshShell.Run strFilePath
+
+End Sub

@@ -1,0 +1,53 @@
+'Program By GopinadhGvs Dt. 23-11-2018
+'To Add parameters of Selected Parts
+'Program By GopinadhGvs _A01_ Dt. 26-11-2021_
+
+'option explicit
+Sub CATMain()
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+Dim sel as Selection
+Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+
+Dim i as integer
+i = 1
+
+For i = 1 to sel.Count
+
+
+set prod1=sel.Item(i).Value
+
+
+Dim filename as String
+filename = prod1.ReferenceProduct.Parent.Name
+
+dim fil1 as string
+fil1 = Replace(filename,".CATPart","")
+
+Set documents1 = CATIA.Documents
+
+Set partDocument1 = documents1.Item(filename)
+
+Dim part1 As Part
+Set part1 = partDocument1.Part
+
+Dim relations1 As Relations
+Set relations1 = part1.Relations
+
+Dim formula1 As Relation
+Set formula1 = relations1.Item("Formula.16")
+
+formula1.Modify "ToString(t /1mm)"
+
+formula1.Rename "Formula.16"
+
+
+Next
+
+End Sub

@@ -1,0 +1,54 @@
+Sub CATMain()
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+Dim sel as Selection
+Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+set prod1=sel.FindObject("CATIAProduct")
+Dim path as String
+path = prod1.ReferenceProduct.Parent.FullName
+
+Set objFile = objFSO.OpenTextFile("C:\Users\mchellachamy\Desktop\old.txt", 1)
+Do While objFile.AtEndOfStream = False
+strLine = objFile.ReadLine
+dim oldno as string
+REM path1  = Replace(strLine,"_","")
+oldno  = strLine
+Loop
+
+
+Set objFile = objFSO.OpenTextFile("C:\Users\mchellachamy\Desktop\new.txt", 1)
+Do While objFile.AtEndOfStream = False
+strLine = objFile.ReadLine
+dim newno as string
+REM path1  = Replace(strLine,"_","")
+newno  = strLine
+Loop
+
+Dim partno as string
+partno = prod1.ReferenceProduct.PartNumber
+partno = Replace(partno,oldno,newno)
+
+Dim instname as string
+instname = prod1.name
+instname = Replace(instname,oldno,newno)
+
+
+prod1.ReferenceProduct.PartNumber = partno
+prod1.name = instname
+
+
+dim strPath as string
+
+Set WshShell = CreateObject("WScript.Shell")
+Set oExec = WshShell.Exec("clip")
+Set oWrite = oExec.stdIn
+oWrite.WriteLine partno
+oWrite.Close
+
+End Sub

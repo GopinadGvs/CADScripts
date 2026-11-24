@@ -1,0 +1,23 @@
+Sub CATMain()
+
+
+
+Dim ActDoc As ProductDocument 
+Set ActDoc = CATIA.ActiveDocument 
+Dim MySel As Selection 
+Set MySel = CATIA.ActiveDocument.Selection 
+MySel.Add ActDoc.Product '.Products.Item (1)
+
+CATIA.RefreshDisplay = True 
+
+CATIA.StartCommand("Generate CATPart from Product...") 
+
+Dim WSShell
+Set WSShell = CreateObject("WScript.Shell")
+
+'WSShell.SendKeys "c:FrmActivate"
+WSShell.SendKeys("{ENTER}")
+
+'SendKeys("{ENTER}")
+
+End Sub

@@ -1,0 +1,6 @@
+option explicit
+Sub CATMain()
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+partDoc1.save
+End Sub

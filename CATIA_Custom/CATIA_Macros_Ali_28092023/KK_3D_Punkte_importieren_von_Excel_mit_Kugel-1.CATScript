@@ -1,0 +1,411 @@
+' aus excelliste auf Koordinate Achsenkreuze , Punkte , Kugeln erzeugen
+' Vorgabe: Spalte A = Name, B = x Koordinate C= Y Coordinate D = Z Koordinate
+' E = Rx  F = RY  G = RZoptional H ( GeoPunkt) und I(Schweisskraft)
+' Spalte A Zeile 2 ist die Stationsbezeichnung
+' Achsenkreuze werden ab Zeile 3 erzeugt
+' Importachsen aus Posis Simulate
+'--------------------------------------------------------------------------------
+'
+'   Klaus Reichle /  kreichle@kirchner-kon.de  27.6.2013
+'--------------------------------------------------------------------------------
+
+
+' Excel Objects
+Dim gXL
+Dim gWksSheet
+
+Dim XYZList(2)
+Dim YPRList(2)
+Dim GEOList(2)
+
+Dim XAxis(2) As Double
+Dim YAxis(2) As Double
+Dim ZAxis(2) As Double
+
+Const PI = 3.141592653589
+Private cFilePath
+Private ZellName
+
+'// Main Routine
+'====================================================================================
+Sub CATMain()
+'====================================================================================
+'On Error Resume Next
+ CATIA.DisplayFileAlerts = False
+    Dim Message, Style, Title, Response, MyString
+    Message = ("Dieses Makro importiert Punkte aus einer Exceltabelle. Folgendes ist zu beachten:" &_
+                        ""&(chr(13))&_
+                            (chr(13)) &_
+                        "   - Werte erst ab Zeile 3"&_
+                            (chr(13)) &_
+                        "   - Spalten A-D = Name - X - Y - Z (Werte als normale Zahl mit , getrennt)"&_
+                            (chr(13)) &_
+                        "   - Spalten H = optional   GeoPunkt = GP oder JA"&_
+                            (chr(13)) &_
+                        "   - in der Zelle A2 muss der neue Filename stehen"&_
+                            (chr(13)) &_
+                        ""&(chr(13))&_
+    "   Willst du fortfahren ?")
+    Style = vbYesNo + vbDefaultButton1    'Define buttons.
+    Title = "Punkte importieren "
+    Response = MsgBox(Message, Style, Title)
+        If Response = vbNo Then Exit Sub   ' User chose Yes.
+   
+
+    
+    ' Dateiauswahl
+
+cFilePath = CATIA.FileSelectionBox("Datei Ã¶ffnen", "*.xls*", CatFileSelectionModeOpen)
+If cFilePath = "" Then Exit Sub
+  
+Call activateExcel(cFilePath)
+
+Dim oPartDoc As DOCUMENT
+Set oPartDoc = CATIA.Documents.Add("Part")
+
+'PartDocument deklarieren
+Dim partDocument As partDocument
+Set partDocument = CATIA.ActiveDocument
+
+'in Isometrische View wechseln
+Dim ThatCamera As Camera
+Set ThatCamera = CATIA.ActiveDocument.Cameras.Item("* iso")
+CATIA.ActiveWindow.ActiveViewer.Viewpoint3D = ThatCamera.Viewpoint3D
+
+
+Dim Part1 As PRODUCT
+Set Part1 = partDocument.GetItem(1)
+
+If gWksSheet.Cells(2, 1) = "" Then
+    newname_folder = Left(cFilePath, InStrRev(cFilePath, "\"))
+    newstr = ""
+        ZellName = Replace(cFilePath, newname_folder, newstr)
+        ZellName = Left(ZellName, InStrRev(ZellName, ".") - 1)
+    'ZellName = "Achsen_aus_Sim"
+Else
+
+    ZellName = gWksSheet.Cells(2, 1)
+
+End If
+ZellName = "VP_" + ZellName
+Part1.PartNumber = ZellName
+Part1.Nomenclature = Part1.PartNumber
+
+Dim oAxisPart As Part
+Set oAxisPart = oPartDoc.Part
+
+Dim axisSystems1 As AxisSystems
+Set axisSystems1 = oAxisPart.AxisSystems
+
+iRow = 3
+
+
+
+
+    While gWksSheet.Cells(iRow, 3) <> ""
+     
+    On Error Resume Next
+    
+    XAxis(0) = 0
+    XAxis(1) = 0
+    XAxis(2) = 0
+    
+    YAxis(0) = 0
+    YAxis(1) = 0
+    YAxis(2) = 0
+
+    ZAxis(0) = 0
+    ZAxis(1) = 0
+    ZAxis(2) = 0
+  
+    XYZList(0) = CDbl(gWksSheet.Cells(iRow, 2))
+    XYZList(1) = CDbl(gWksSheet.Cells(iRow, 3))
+    XYZList(2) = CDbl(gWksSheet.Cells(iRow, 4))
+    GEOList(3) = CDbl(gWksSheet.Cells(iRow, 8))
+    
+    YPRList(0) = CDbl(gWksSheet.Cells(iRow, 5) * PI / 180)
+    YPRList(1) = CDbl(gWksSheet.Cells(iRow, 6) * PI / 180)
+    YPRList(2) = CDbl(gWksSheet.Cells(iRow, 7) * PI / 180)
+    
+
+    Call FromYPRToCATMath(XYZList, YPRList)
+    
+    Set axisSystem1 = axisSystems1.Add
+    axisSystem1.name = gWksSheet.Cells(iRow, 1)
+
+axisSystem1.Type = catAxisSystemStandard
+
+axisSystem1.OriginType = catAxisSystemOriginByCoordinates
+
+Dim arrayOfVariantOfDouble1(2)
+arrayOfVariantOfDouble1(0) = XYZList(0)
+arrayOfVariantOfDouble1(1) = XYZList(1)
+arrayOfVariantOfDouble1(2) = XYZList(2)
+Set axisSystem1Variant = axisSystem1
+axisSystem1Variant.PutOrigin arrayOfVariantOfDouble1
+
+axisSystem1.XAxisType = catAxisSystemAxisByCoordinates
+
+Dim arrayOfVariantOfDouble2(2)
+arrayOfVariantOfDouble2(0) = XAxis(0)
+arrayOfVariantOfDouble2(1) = XAxis(1)
+arrayOfVariantOfDouble2(2) = XAxis(2)
+Set axisSystem1Variant = axisSystem1
+axisSystem1Variant.PutXAxis arrayOfVariantOfDouble2
+
+axisSystem1.YAxisType = catAxisSystemAxisByCoordinates
+
+Dim arrayOfVariantOfDouble3(2)
+arrayOfVariantOfDouble3(0) = YAxis(0)
+arrayOfVariantOfDouble3(1) = YAxis(1)
+arrayOfVariantOfDouble3(2) = YAxis(2)
+Set axisSystem1Variant = axisSystem1
+axisSystem1Variant.PutYAxis arrayOfVariantOfDouble3
+
+axisSystem1.ZAxisType = catAxisSystemAxisByCoordinates
+
+Dim arrayOfVariantOfDouble4(2)
+arrayOfVariantOfDouble4(0) = ZAxis(0)
+arrayOfVariantOfDouble4(1) = ZAxis(1)
+arrayOfVariantOfDouble4(2) = ZAxis(2)
+Set axisSystem1Variant = axisSystem1
+axisSystem1Variant.PutZAxis arrayOfVariantOfDouble4
+
+oAxisPart.UpdateObject axisSystem1
+
+axisSystem1.IsCurrent = False
+
+oAxisPart.Update
+    
+    iRow = iRow + 1
+    
+  Wend
+  
+ SUB_punkte punkte
+
+    ' Closes the Excelfile
+   Call desactivateExcel(File)
+   MsgBox "Fertig !" & vbCrLf & ZellName '
+End Sub '/////////////////////////////////////////////////////////// CATMain
+
+ 
+ 
+'-----------------------------------------------------------------------------
+' FromYPRToCATMath
+''-----------------------------------------------------------------------------
+Sub FromYPRToCATMath(XYZList, YPRList)
+
+  Dim xx, yy, zz, roll, pitch, yaw As Double
+  Dim c_roll, c_pitch, c_yaw, s_roll, s_pitch, s_yaw As Double
+
+  xx = XYZList(0)
+  yy = XYZList(1)
+  zz = XYZList(2)
+  
+  yaw = YPRList(0)
+  pitch = YPRList(1)
+  roll = YPRList(2)
+
+  c_roll = Cos(roll)
+  c_pitch = Cos(pitch)
+  c_yaw = Cos(yaw)
+  s_roll = Sin(roll)
+  s_pitch = Sin(pitch)
+  s_yaw = Sin(yaw)
+   
+  XAxis(0) = c_roll * c_pitch
+  XAxis(1) = s_roll * c_pitch
+  XAxis(2) = -s_pitch
+
+  YAxis(0) = (c_roll * s_pitch * s_yaw) - (s_roll * c_yaw)
+  YAxis(1) = (s_roll * s_pitch * s_yaw) + (c_roll * c_yaw)
+  YAxis(2) = c_pitch * s_yaw
+
+  ZAxis(0) = (c_roll * s_pitch * c_yaw) + (s_roll * s_yaw)
+  ZAxis(1) = (s_roll * s_pitch * c_yaw) - (c_roll * s_yaw)
+  ZAxis(2) = c_pitch * c_yaw
+
+End Sub
+
+
+
+
+'//---------------------------------------------------------------------------
+'// Opens and activates Excel-File
+'//---------------------------------------------------------------------------
+Sub activateExcel(sFileName)
+
+  Set gXL = CreateObject("Excel.Application")
+  gXL.Workbooks.Open sFileName
+  gXL.DisplayAlerts = False
+  gXL.Visible = False
+  Set gWksSheet = gXL.ActiveSheet
+
+End Sub
+
+
+'//---------------------------------------------------------------------------
+'// Closes Excel-File
+'//---------------------------------------------------------------------------
+Sub desactivateExcel(sFileName)
+
+ gXL.Workbooks.Close
+ 
+End Sub
+
+
+'//---------------------------------------------------------------------------
+'// Punkte und Kugeln erzeugen
+'//---------------------------------------------------------------------------
+
+Sub SUB_punkte(punkte)
+ 
+  Set myPart = CATIA.ActiveDocument.Part
+  ' factory zu erstellen der Punkte
+  Set HybShapeFac = myPart.HybridShapeFactory
+ ' hauptkörper holen zum einfügen der Punkte
+    Set HKoerper = CATIA.ActiveDocument.Part.HybridBodies
+    Set GEO_points = HKoerper.Add()
+    GEO_points.name = "GEO_Punkte"
+    Set AUS_points = HKoerper.Add()
+    AUS_points.name = "Ausschweiss_Punkte"
+'__________________Anotiontesxt erzeugen
+   
+Set annotationSets1 = myPart.AnnotationSets
+Set annotationSet1 = annotationSets1.Add("CEG2")
+Set hybridBodies1 = myPart.HybridBodies
+Set hybridBody1 = hybridBodies1.Item("GEO_Punkte") 'GEO_points
+Set hybridBody2 = hybridBodies1.Item("Ausschweiss_Punkte")
+'__________________Anotiontesxt erzeugen
+
+  
+  ' Koordianten beginnen in der 2 Zeile der Tabelle
+  nRow = 3
+
+
+  
+  ' Zeilen solange einlesen bis nichts mehr drin steht
+  Do
+    ' Spalte 1 = Name // Spalte 2,3,4 = Werte
+    Element = (gWksSheet.Cells(nRow, 1).Text)
+    XCoord = CDbl(gWksSheet.Cells(nRow, 2).Value)
+    YCoord = CDbl(gWksSheet.Cells(nRow, 3).Value)
+    ZCoord = CDbl(gWksSheet.Cells(nRow, 4).Value)
+    GEO_PT = (gWksSheet.Cells(nRow, 8).Value) ' Info ob Geo Punkt
+    ZKRAFT = (gWksSheet.Cells(nRow, 9).Value) ' Info benötigte Zangenkraft
+    
+    ' Punkt mit den Koordinaten erstellen
+    Set Point = HybShapeFac.AddNewPointCoord(XCoord, YCoord, ZCoord)
+    
+    If (GEO_PT = "GP") Or (GEO_PT = "JA") Or (GEO_PT = "Y") Then
+     
+                GEO_points.AppendHybridShape Point
+                Point.name = Element + "_" + ZKRAFT
+                Set myAxis = myPart.CreateReferenceFromObject(myPart.AxisSystems.Item("Absolute Axis System")) 'Axis mit dem Namen erforderlich
+               
+                Set hybridShapeSphere1 = HybShapeFac.AddNewSphere(Point, myAxis, 8, -45, 45, 0, 180)
+                hybridShapeSphere1.Limitation = 1
+                GEO_points.AppendHybridShape hybridShapeSphere1
+                hybridShapeSphere1.name = "GEO_" + Element + "_" + ZKRAFT
+                myPart.InWorkObject = hybridShapeSphere1
+                myPart.Update
+ '__________________Anotiontesxt erzeugen
+                                 
+                Set hybridShapes1 = hybridBody1.HybridShapes
+                Set reference1 = Point
+                Set userSurfaces1 = myPart.UserSurfaces
+                Set userSurface1 = userSurfaces1.Generate(reference1)
+                Dim bSTR1
+                bSTR1 = myPart.name
+                Set annotationFactory1 = annotationSet1.AnnotationFactory
+                Set annotation1 = annotationFactory1.CreateEvoluateText(userSurface1, XCoord, YCoord, ZCoord, False)
+  		
+                annotation1.Text.Text = Point.name
+                myPart.Update
+'__________________Anotiontesxt erzeugen
+   
+
+                ' Einfärben
+             
+    If (ZKRAFT < "4KN") Or (ZKRAFT < "4Kn") Or (ZKRAFT < "4kn") Then
+         
+         Set selection1 = CATIA.ActiveDocument.Selection
+                    selection1.Add hybridShapeSphere1
+                    Set visPropertySet1 = selection1.VisProperties
+                    visPropertySet1.SetRealColor 0, 255, 0, 0  ''einfärben
+                    selection1.Clear
+        
+    Else
+         Set selection1 = CATIA.ActiveDocument.Selection
+                    selection1.Add hybridShapeSphere1
+                    Set visPropertySet1 = selection1.VisProperties
+                    visPropertySet1.SetRealColor 0, 155, 0, 0  ''einfärben
+                    selection1.Clear
+
+    End If
+
+    Else
+                 AUS_points.AppendHybridShape Point
+                Point.name = Element + "_" + ZKRAFT
+                Set myAxis = myPart.CreateReferenceFromObject(myPart.AxisSystems.Item("Absolute Axis System")) 'Axis mit dem Namen erforderlich
+                Set hybridShapeSphere1 = HybShapeFac.AddNewSphere(Point, myAxis, 8, -45, 45, 0, 180)
+                hybridShapeSphere1.Limitation = 1
+                 AUS_points.AppendHybridShape hybridShapeSphere1
+                hybridShapeSphere1.name = "SWP_" + Element + "_" + ZKRAFT
+                myPart.InWorkObject = hybridShapeSphere1
+                ' Einfärben
+                  myPart.Update
+                  
+                  
+'__________________Anotiontesxt erzeugen
+                                 
+                Set hybridShapes1 = hybridBody2.HybridShapes
+                Set reference1 = Point
+                Set userSurfaces1 = myPart.UserSurfaces
+                Set userSurface1 = userSurfaces1.Generate(reference1)
+                Dim bSTR2
+                bSTR1 = myPart.name
+                Set annotationFactory1 = annotationSet1.AnnotationFactory
+                Set annotation1 = annotationFactory1.CreateEvoluateText(userSurface1, XCoord, YCoord, ZCoord, False)
+
+                annotation1.Text.Text = Point.name
+                myPart.Update
+'__________________Anotiontesxt erzeugen
+                  
+If (ZKRAFT < "4KN") Or (ZKRAFT < "4Kn") Or (ZKRAFT < "4kn") Then
+
+                    Set selection1 = CATIA.ActiveDocument.Selection
+                    selection1.Add hybridShapeSphere1
+                    Set visPropertySet1 = selection1.VisProperties
+                    visPropertySet1.SetRealColor 0, 119, 255, 0  'einfärben
+                    selection1.Clear
+
+    Else
+            Set selection1 = CATIA.ActiveDocument.Selection
+                    selection1.Add hybridShapeSphere1
+                    Set visPropertySet1 = selection1.VisProperties
+                    visPropertySet1.SetRealColor 0, 119, 155, 0  'einfärben
+                    selection1.Clear
+
+    End If
+
+    End If
+               
+  ' Zeile hochzählen
+    nRow = nRow + 1
+    
+  ' Schleife verlassen, wenn Zelle leer ist
+  Loop While (gWksSheet.Cells(nRow, 2).Text <> "")
+ 
+
+  ' Part speichern
+        PFADAUSGABE = Left(cFilePath, InStrRev(cFilePath, "\")) & ZellName & (".CATPart")
+        Set productDocument1 = CATIA.ActiveDocument
+        productDocument1.SaveAs PFADAUSGABE
+
+
+'Ganzes Bild auf bildschirm zeigen
+CATIA.StartCommand "Fit All In"
+
+End Sub
+

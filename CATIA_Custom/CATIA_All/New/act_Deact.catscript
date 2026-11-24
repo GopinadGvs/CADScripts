@@ -1,0 +1,54 @@
+Sub catmain()
+
+Dim objShell
+	
+Dim strPath
+	
+Set objShell = CreateObject("Wscript.Shell")
+	
+strPath = objShell.SpecialFolders("Desktop")
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+
+Set objFile1 = objFSO.OpenTextFile(strPath & "\actdeact.txt", 1)
+
+Do While objFile1.AtEndOfStream = False
+strLine1 = objFile1.ReadLine
+
+dim path1 as string
+
+path1  = strLine1
+
+Dim root As ProductDocument
+Set root = CATIA.ActiveDocument
+
+Dim mainprod As Product
+Set mainprod = root.Product
+
+Dim prods As Product
+Set prods = mainprod.Products
+
+Set selection1 = root.Selection
+
+
+'Dim prod As Product
+
+'MsgBox (prods.Products.Count)
+
+'For i = 1 To prods.Products.Count
+
+Dim prod As Product
+Set prod = prods.Item(path1)
+
+selection1.add prod
+
+CATIA.StartCommand ("Activate / Deactivate Component")
+selection1.Clear
+
+'Debug.Print (prods.Products.Item(i).Name)
+
+'Next
+
+Loop
+
+End Sub

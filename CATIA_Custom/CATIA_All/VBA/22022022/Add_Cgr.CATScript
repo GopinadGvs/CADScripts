@@ -1,0 +1,18 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Dim productDocument1 As Document
+Set productDocument1 = CATIA.ActiveDocument
+
+Dim product1 As Product
+Set product1 = productDocument1.Product
+
+Dim products1 As Products
+Set products1 = product1.Products
+
+Dim arrayOfVariantOfBSTR1(0)
+arrayOfVariantOfBSTR1(0) = "C:\Users\vsguddanti\Desktop\Nov\63201E00000400A328_CATProduct_07-12-2021_12_51_38.cgr"
+products1.AddComponentsFromFiles arrayOfVariantOfBSTR1, "All"
+
+End Sub

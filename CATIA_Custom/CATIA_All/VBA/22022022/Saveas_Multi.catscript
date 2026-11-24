@@ -1,0 +1,84 @@
+'option explicit
+Sub CATMain()
+
+CATIA.DisplayFileAlerts = False
+'Const DeleteReadOnly = True
+
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+
+DIM A AS STRING
+'A = INPUTBOX("OLD NAME","OLD NAME",A)
+
+DIM B AS STRING
+'B = INPUTBOX("NEW NAME","NEW NAME",B)
+
+Dim sel as Selection
+Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+
+Dim i as integer
+i = 1
+
+Dim j as integer
+j = 0
+
+For i = 1 to sel.Count
+
+set prod1=sel.Item(i).Value
+REM set prod1=sel.FindObject("CATIAProduct")
+
+Dim fullpath as string
+fullpath = prod1.ReferenceProduct.Parent.FullName
+
+Dim filename as String
+filename = prod1.ReferenceProduct.Parent.Name
+filename = Replace(filename,".CATPart","")
+filename = Replace(filename,".CATProduct","")
+Dim partno as string
+partno = prod1.ReferenceProduct.PartNumber
+Dim instname as string
+instname = prod1.name
+
+Set productDocument1 = CATIA.ActiveDocument
+
+Set documents1 = CATIA.Documents
+
+Set partDocument1 = documents1.Item(prod1.ReferenceProduct.Parent.Name)
+
+A = partno
+
+C = "3517"
+
+D = C + J
+
+'B = "63202E00000400" & D
+B = "63201E00000400" & D
+
+'msgbox(B)
+
+dim saveaspath as string
+'saveaspath = Replace(fullpath,A,B)
+saveaspath = "J:\63200E00000400000\63201E00000400000\" & B & ".CATPart"
+partDocument1.SaveAs saveaspath
+
+prod1.ReferenceProduct.PartNumber = B
+prod1.name = B + "." + "1"
+
+'Set obj = CreateObject("Scripting.FileSystemObject")
+'obj.DeleteFile(fullpath)
+REM obj.DeleteFile(fullpath),DeleteReadOnly
+
+J = J+1
+'J = J+2
+
+Next
+
+CATIA.DisplayFileAlerts = True
+
+End Sub

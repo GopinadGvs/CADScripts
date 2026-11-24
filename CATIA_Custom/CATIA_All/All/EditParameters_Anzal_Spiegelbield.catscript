@@ -1,0 +1,48 @@
+'option explicit
+Sub CATMain()
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+Dim sel as Selection
+Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+
+Dim i as integer
+i = 1
+
+For i = 1 to sel.Count
+
+
+set prod1=sel.Item(i).Value
+
+
+Dim filename as String
+filename = prod1.ReferenceProduct.Parent.Name
+
+dim fil1 as string
+fil1 = Replace(filename,".CATPart","")
+
+Set documents1 = CATIA.Documents
+
+Set partDocument1 = documents1.Item(filename)
+
+Set part1 = partDocument1.Part
+
+Set parameters1 = part1.Parameters
+
+Set strParam1 = parameters1.Item(fil1 + "\Stueckliste\Anzahl")
+
+strParam1.Value = "1"
+
+Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Anzahl_spiegelbildlich")
+
+strParam1.Value = "1"
+
+
+Next
+
+End Sub

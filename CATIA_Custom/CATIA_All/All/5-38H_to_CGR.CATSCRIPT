@@ -1,0 +1,558 @@
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'                                                                                                  '
+' MAKRO ZUR ERSETZUNG VON ??-38H_* UND ??-38D* BAUGRUPPEN IN 2.EBENE DURCH CGR                     '
+' © VOLKSWAGEN AG                                                                                  '
+'                                                                                                  '
+' Programmierer: Matthias Nitschkowsky                                                             '
+'                IndustrieHansa GmbH                                                               '
+'                15.02.2013                                                                        '
+'                                                                                                  '
+' Im Auftrag von: Volkswagen AG                                                                    '
+'                 Abt. PT/AD3                                                                      '
+'                                                                                                  '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Language="VBSCRIPT"
+Public oSrcDoc		As Document
+Public oTrgDoc		As Document
+Public oDrwDoc		As Document
+Public oActDoc		As Document
+Public oSrcWin		As Window
+Public oTrgWin		As Window
+Public oDrwWin		As Window
+Public aPrd()		As Product
+Public aDoc()		As Document
+Public iPrd			As Integer
+Public sSavePath	As String
+Public FSO			As Object
+Public iErr			As Integer
+Public iWrn			As Integer
+Public bDrw			As Boolean
+Public oLog
+
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' Klassendefinition: Textdatei                                                                     '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Class VWP_TxtFile
+	Private m_FSO
+	Private m_Shell
+	Private m_TxtFile	As File
+	Private m_TxtStrg	As String
+	Private m_LF		As String
+	Private	m_Error		As Boolean
+	Private m_TxtPath	As String
+	Private m_TxtName	As String
+
+	Private Sub Class_Initialize()
+		m_Error = False
+		Set m_Shell = CreateObject("WScript.Shell")
+		Set m_FSO = CreateObject("Scripting.FileSystemObject")
+		m_LF = Chr(10) & Chr(13)
+		' Temporärverzeichnis
+		m_TxtPath = m_FSO.GetSpecialFolder(2)
+		' Temporären Namen erzeugen
+		m_TxtName = m_FSO.GetTempName 
+		m_TxtStrg = m_FSO.BuildPath(m_TxtPath, m_TxtName)
+		Set m_TxtFile = m_FSO.CreateTextFile(m_TxtStrg, True)
+		If Err.Number <> 0 Then
+			MsgBox "Logdatei konnte nicht erzeugt werden"
+			Err.Clear
+			CreateLog = ""
+			m_Error = True
+			Exit Sub
+		End If
+		m_TxtFile.Close
+	End Sub
+	
+	Private Sub Class_Terminate()
+		If m_Error = False Then
+			On Error Resume Next
+			m_FSO.DeleteFile(m_TxtStrg)
+		End If
+	End Sub
+		
+	Public Sub Write(sMsg As String)
+		Dim iLayout	As Integer 'Normal=0, Fehler=16, Warnung=32, Info=64
+		
+		If m_Error = False Then
+			On Error Resume Next
+			Set m_TxtFile = m_FSO.OpenTextFile(m_TxtStrg, 8, False)
+			If Err.Number <> 0 Then
+				m_Error = True
+				Err.Clear
+				On Error Goto 0
+				MsgBox sMsg, iLayout, ""
+			End If
+			m_TxtFile.WriteLine sMsg
+			m_TxtFile.Close
+		End If
+	End Sub
+	
+	Public Sub WriteArray(sMsg)
+		Dim aMsg
+		
+		If m_Error = False Then
+			aMsg = Split(sMsg, Chr(13))
+			On Error Resume Next
+			Set m_TxtFile = m_FSO.OpenTextFile(m_TxtStrg, 8, False)
+			If Err.Number <> 0 Then
+				m_Error = True
+				Err.Clear
+				On Error Goto 0
+				MsgBox "Eintrag konnte nicht in Datei geschrieben werden" & LF & m_TxtStrg, 16, ""
+				Exit Sub
+			End If
+			For i = 0 To UBound(aMsg)
+				m_TxtFile.WriteLine aMsg(i)
+			Next
+			m_TxtFile.Close
+		End If
+	End Sub
+	
+	Public Sub Save(sSaveName)
+		Dim sDest As String
+		
+		If Len(sSaveName) < 5 Then
+			sSaveName = m_TxtStrg
+		End If
+		
+		If m_Error = False Then
+			sDest = InputBox("Speichern unter:","-->", sSaveName)
+			If Len(sDest) > 0 Then
+				m_FSO.CopyFile m_TxtStrg, sDest
+			End If
+		End If
+	End Sub
+	
+	Public Sub Show()
+		If m_Error = False Then
+			m_Shell.run "Notepad" & " " & m_TxtStrg, 9, True
+		Else
+			MsgBox "Log-Funktion momentan nicht verfügbar!", 16, "FEHLER!"
+		End If
+	End Sub
+	
+	Public Function GetTxtFile() As String
+		GetTxtFile = m_TxtStrg
+	End Function
+End Class
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' Klassendefinition: Log-Datei                                                                     '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Class VWP_LogFile
+	Private m_TxtFile	As File
+	Private m_TxtStrg	As String
+	
+	Private Sub Class_Initialize()
+		Set m_TxtFile = New VWP_TxtFile
+		m_TxtFile.Write "LOGFILE " &  CStr(Now) & m_LF & m_LF
+	End Sub
+	
+	Private Sub Class_Terminate()
+		Set m_TxtFile = Nothing
+	End Sub
+	
+	' neue Methoden
+	Public Sub WriteInfo(sMsg As String)
+		m_TxtFile.Write "        " & sMsg
+	End Sub
+	
+	Public Sub WriteWarning(sMsg As String)
+		m_TxtFile.Write "Warnung:" & sMsg
+	End Sub
+	
+	Public Sub WriteError(sMsg As String)
+		m_TxtFile.Write "FEHLER: " & sMsg
+	End Sub
+	
+	Public Sub WriteSomething(sMsg As String)
+		m_TxtFile.Write sMsg
+	End Sub
+	
+	Public Sub WriteSeparator(sSize As String)
+		If sSize = 0 Then 
+			m_TxtFile.Write  "===================================================================================================="
+			m_TxtFile.Write  ""
+		Else
+			m_TxtFile.Write  "----------------------------------------------------------------------------------------------------"
+		End If
+	End Sub
+	
+	
+	' Overload Methoden
+	Public Sub WriteArray(sMsg)
+		m_TxtFile.Write sMsg
+	End Sub
+	
+	Public Sub Show()
+		m_TxtFile.Show
+	End Sub
+	
+	Public Sub Save(sSaveName)
+		m_TxtFile.Save(sSaveName)
+	End Sub
+	
+	Public Function GetLogFile() As String
+		GetLogFile = m_TxtFile.GetTxtFile
+	End Function
+End Class
+
+
+
+Sub CATMain()
+	Dim sDocPath	As String
+	Dim iShowLog	As Integer
+	Dim iUpdateDrw	As Integer
+	Dim iPrdChoice	As Integer
+
+	Set FSO = CreateObject("Scripting.FileSystemObject")
+	Set oDrwDoc = Nothing
+	On Error Resume Next
+	Set oSrcDoc = CATIA.ActiveDocument
+
+' Dokumenttyp ermitteln
+	bDrw = False
+	If Err.Number <> 0 Then
+		MsgBox "Kein aktives Dokument..."
+		Err.Clear
+		Exit Sub
+	Else
+' Speicherpfad setzen
+		CATIA.DisplayFileAlerts = False
+		iPnt = InStr(oSrcDoc.Name, ".")
+		sSfx = Right(oSrcDoc.Name, Len(oSrcDoc.Name) - iPnt)
+		If sSfx = "CATDrawing" Then ' Zeichnungsdokument
+			Set oSrcDoc = CheckDrw(oSrcDoc)
+			If oSrcDoc Is Nothing Then
+				MsgBox "Zeichnungsmodell ist kein Product"
+				Exit Sub
+			End If
+			Set oDrwDoc = CATIA.ActiveDocument
+			Set oActDoc = CATIA.ActiveDocument
+			Set oDrwWin = CATIA.ActiveWindow
+			CATIA.Documents.Open(oSrcDoc.FullName)
+			oSrcWin = CATIA.ActiveWindow
+			bDrw = True
+		Else ' Product-Dokument
+			If sSfx = "CATProduct" Then
+				Set oSrcWin = CATIA.ActiveWindow
+				Set oActDoc = CATIA.ActiveDocument
+			Else
+				MsgBox "Kein Product- oder DrawingDocument ist aktiv"
+				Exit Sub
+			End If
+		End If
+		sSavePath = SetSavePath()
+		If sSavePath = "\" Then
+			Exit Sub
+		End If
+	End If
+
+' Initialisierung Log-Datei
+	Set oLog = New VWP_LogFile
+	oLog.WriteSeparator 0
+	iErr = 0
+	iWrn = 0
+
+	Set oSrcWin = CATIA.ActiveWindow
+	oSrcDoc.Product.ApplyWorkMode DESIGN_MODE
+	CATIA.StatusBar = "Update..."
+	oSrcDoc.Product.Update
+	oLog.WriteInfo "Baugruppe " & oSrcDoc.Product.PartNumber
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' Auswahl der Products...                                                                          '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+	iPrdChoice = MsgBox("Products automatisch wählen?" & Chr(13) & "-Ja:      alle 38D/38H Products werden gewählt" & Chr(13) & "-Nein: Products am Bildscherm wählen",36,"?")
+	If iPrdChoice = 6 Then
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' Products mit gesuchter Teilenummer ermitteln                                                     '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+		iPrd = 0
+		For Each oProd in oSrcDoc.Product.Products
+			For Each oSubProd In oProd.Products
+				If (Mid(oSubProd.PartNumber, 3, 4) = "-38H" Or Mid(oSubProd.PartNumber, 3, 4) = "-38D") Then
+					iPrd = iPrd + 1
+					ReDim Preserve aPrd(iPrd)
+					Set aPrd(iPrd) = oSubProd
+				End If
+			Next
+		Next
+	Else
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' Products mit am Bildschirm auswählen                                                             '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+		Set oSrcSel = CATIA.ActiveDocument.Selection
+		Dim oSrcSel				As Selection
+		Dim sStatus				As String
+		Dim sObjType(1)			As String
+		sObjType(0)="Product" 
+		sObjType(1)="Part" 
+		oSrcSel.Clear
+		sStatus = oSrcSel.SelectElement3(sObjType, "Bitte die Elemente selektieren", False, CATMultiSelTriggWhenUserValidatesSelection, False)
+		If (sStatus = "Cancel") Then
+			oLog.WriteInfo "Makro wurde abgebrochen"
+			iShowLog = MsgBox("Makro wurde abgebrochen." & Chr(13) & "Logdatei anzeigen?", 4, "Ende")
+			If iShowLog = 6 Then
+				oLog.Show
+			End If
+			Exit Sub
+		ElseIf (sStatus = "Normal") Then
+			For PrdIndex = 1 to oSrcSel.Count2
+				iPrd = iPrd + 1
+				ReDim Preserve aPrd(iPrd)
+				Set aPrd(iPrd) = oSrcSel.Item(PrdIndex).Value
+			Next
+		End If
+	End If
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' ermittelte Products als CGR speichern und Products gegen CGR austauschen                         '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+	For i=1 To iPrd
+		If GetDocTypeByProd(aPrd(i)) <> "cgr" Then
+			CreateCgr(aPrd(i))
+		End If
+	Next
+	oLog.WriteSeparator 1
+	CATIA.StatusBar = "Update..."
+	oSrcDoc.Product.Update
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' ermittelte Products speichern                                                                    '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+	For i=1 To iPrd
+		isOK = SaveDoc(GetDocByProd(aPrd(i).Parent.Parent))
+	Next
+	isOK = SaveDoc(oSrcDoc)
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' Zeichnung, wenn vorhanden, speichern                                                             '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+	If bDrw Then
+		oDrwWin.Activate
+		oSrcWin.Close
+' Zeichnungsupdate
+' ACHTUNG! Kann zeitaufwändig sein!
+		iUpdateDrw = MsgBox("Zeichnungsupdate durchführen?", 4, "Update")
+		If iUpdateDrw = 6 Then
+			oDrwDoc.DrawingRoot.Update
+		End If
+		isOK = SaveDoc(oDrwDoc)
+	End If
+
+' zur Vermeidung von Fehlern bei wiederholtem Makrodurchlauf müssen die ersetzten Products aus dem Speicher entfernt werden
+' funktioniert nur zuverlässig durch schließen des aktiven Document
+' ACHTUNG! Reload kann zeitaufwändig sein!
+'	sDocPath = oActDoc.FullName
+'	oSrcWin.Close
+'	oActDoc.Close
+'	CATIA.Documents.Open(sDocPath)
+
+	iShowLog = MsgBox("Makro beendet" & Chr(13) & "Warnungen: " & CStr(iWrn) & Chr(13) & "Fehler: " & CStr(iErr) & Chr(13) & "Logdatei anzeigen?", 4, "Ende")
+	If iShowLog = 6 Then
+		oLog.Show
+	End If
+End Sub
+
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'                                                                                                  '
+'  Speicherpfad einstellen                                                                         '
+'                                                                                                  '
+'                                                                                                  '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Function SetSavePath() As String
+	Dim sTxt1	As String
+	Dim sTxt2	As String
+	
+	
+	Dim oFolder	As Folder
+	Dim sStrg	As String
+	Dim sName	As String
+	Dim oShell	As Object
+	
+	Set oShell = CreateObject("Shell.Application")
+	Set oFolder = oShell.Namespace( &H11)
+	Set oFolderItem = oFolder.Self
+	sStrg = oFolderItem.Path
+	Set oFolder = oShell.BrowseForFolder(0, "Bitte Speicherpfad angeben", 	&H14, sStrg)
+	If oFolder Is Nothing Then
+			sStrg = "\"
+			Exit Function
+	End If
+	sStrg = oFolder.self.path
+	If Right(sStrg, 1) <> "\" Then
+		sStrg = sStrg &  "\"
+	End If
+	SetSavePath = sStrg
+End Function
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'                                                                                                  '
+'  CGR Daten erzeugen                                                                              '
+'                                                                                                  '
+'                                                                                                  '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub CreateCgr(oProd As Object)
+	If (GetDocTypeByProd(oProd) = "CATProduct") Or (GetDocTypeByProd(oProd) = "CATPart") Then
+		On Error Resume Next
+		Set oTrgDoc = GetDocByProd(oProd)
+		oTrgDoc.ExportData sSavePath & oProd.PartNumber & ".cgr", "cgr"
+		If Err.Number <> 0 Then
+			oLog.WriteWarning oProd.Name & ": CGR wurde nicht korrekt gespeichert"
+			iWrn = iWrn + 1
+			Err.Clear
+		Else
+			oLog.WriteInfo oProd.Name & ": CGR wurde erzeugt"
+		End If
+		ReplacePrd(oProd)
+	Else
+		oLogWriteWarning oProd.Name & " ist kein Product, Austausch nicht möglich"
+		iWrn = iWrn + 1
+	End If
+End Sub
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'                                                                                                  '
+'  Product gegen CGR austauschen                                                                   '
+'                                                                                                  '
+'                                                                                                  '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub ReplacePrd(oProd As Object)
+	Set oParProd = oProd.Parent.Parent
+	On Error Resume Next
+	Set oProd = oParProd.Products.ReplaceComponent(oProd, sSavePath & oProd.PartNumber & ".cgr", True)
+	If Err.Number <> 0 Then
+		oLog.WriteWarning oProd.Name & " konnte nicht ausgetauscht werden"
+		iWrn = iWrn + 1
+		Err.Clear
+	Else
+		oLog.WriteInfo oProd.Name & " wurde gegen " & sSavePath & oProd.PartNumber & ".cgr ausgetauscht", 0
+	End If
+End Sub
+
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'                                                                                                  '
+'  Dokument des Products ermitteln                                                                 '
+'                                                                                                  '
+'                                                                                                  '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Function GetDocByProd(oProd As Object) As Document
+	Dim iPnt	As Integer
+	Dim sComp	As String
+	Dim sPrdName	As String
+
+	sPrdNameArray = Split(oProd.PartNumber,".")
+	sPrdName = sPrdNameArray(0)
+	For Each oCDoc in CATIA.Documents
+		iPnt = InStr(oCDoc.Name, ".")
+		sComp = Left(oCDoc.Name, iPnt - 1)
+		If sPrdName = sComp Then
+			Set GetDocByProd = oCDoc
+			Exit Function
+		End If
+	Next
+	oLog.WriteWarning oProd.PartNumber & " Document konnte nicht ermittelt werden"
+	iWrn = iWrn + 1
+End Function
+
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'                                                                                                  '
+'  Dokumenttyp des Products ermitteln                                                              '
+'                                                                                                  '
+'                                                                                                  '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Function GetDocTypeByProd(oProd As Object) As String
+	Dim sSuffix	As String
+
+	If oProd.HasAMasterShapeRepresentation() Then
+		sSuffix = StrReverse(oProd.GetMasterShapeRepresentationPathName)
+		aSuffix = split(sSuffix,".")
+		sSuffix = StrReverse(aSuffix(0))
+	Else
+		sSuffix = "CAT" & TypeName(oProd)
+	End If
+
+	If Len(sSuffix) > 2 Then
+		GetDocTypeByProd = sSuffix
+	Else
+		oLog.WriteWarning oProd.PartNumber & " DocumentTyp konnte nicht ermittelt werden"
+		iWrn = iWrn + 1
+	End If
+End Function
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'                                                                                                  '
+'  Dokument speichern                                                                              '
+'                                                                                                  '
+'                                                                                                  '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Function SaveDoc(oDoc As Document) As Boolean
+	SaveDoc = True
+	If sSavePath <> oDoc.Path & "\" Then
+		On Error Resume Next
+		oDoc.SaveAs sSavePath & oDoc.Name
+		If Err.Number <> 0 Then
+			SaveDoc = False
+			oLog.WriteError oDoc.Name & " konnte nicht gespeichert werden"
+			iErr = iErr + 1
+			Err.Clear
+			On Error Goto 0
+		Else
+			oLog.WriteInfo oDoc.Name & " wurde gespeichert unter: " & sSavePath
+		End If
+	Else
+		On Error Resume Next
+		oDoc.Save
+		If Err.Number <> 0 Then
+			SaveDoc = False
+			oLog.WriteError oDoc.Name & " konnte nicht gespeichert werden"
+			iErr = iErr + 1
+			Err.Clear
+			On Error Goto 0
+		Else
+			oLog.WriteInfo oDoc.Name & " wurde gespeichert", 0
+		End If
+	End If
+End Function
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'                                                                                                  '
+'  Zeichnungsmodell ermitteln                                                                      '
+'                                                                                                  '
+'                                                                                                  '
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Function CheckDrw(oDoc As Document) As Document
+	Dim oDrwRoot	As CATIADrawingDrawing
+	Dim oDrwSheet	As CATIADrawingSheet 
+	Dim oDrwView	As CATIADrawingView
+
+	Set oDrwRoot = oDoc.DrawingRoot
+	For Each oDrwSheet In oDrwRoot.Sheets
+		For Each oDrwView In oDrwSheet.Views
+			If oDrwView.IsGenerative Then
+				If Right(oDrwView.GenerativeBehavior.Document.Parent.Name, 10) = "CATProduct" Then
+					Set CheckDrw = oDrwView.GenerativeBehavior.Document.Parent
+					Exit Function
+				End If
+			End If
+		Next
+	Next
+	Set CheckDrw = Nothing
+End Function
+
+
+

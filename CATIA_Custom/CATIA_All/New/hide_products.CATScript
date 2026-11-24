@@ -1,0 +1,63 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Dim objShell
+	
+Dim strPath
+	
+Set objShell = CreateObject("Wscript.Shell")
+	
+strPath = objShell.SpecialFolders("Desktop")
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+
+Set objFile1 = objFSO.OpenTextFile(strPath & "\hideproducts.txt", 1)
+
+Do While objFile1.AtEndOfStream = False
+strLine1 = objFile1.ReadLine
+
+dim path1 as string
+
+path1  = strLine1
+
+Dim productDocument1 As Document
+Set productDocument1 = CATIA.ActiveDocument
+
+Dim selection1 As Selection
+Set selection1 = productDocument1.Selection
+
+Dim visPropertySet1 As VisPropertySet
+Set visPropertySet1 = selection1.VisProperties
+
+Dim product1 As Product
+Set product1 = productDocument1.Product
+
+Dim products1 As Products
+Set products1 = product1.Products
+
+Dim product2 As Product
+Set product2 = products1.Item(path1)
+
+Set products1 = product2.Parent
+
+Dim bSTR1 As String
+bSTR1 = product2.Name
+
+selection1.Add product2
+
+Set visPropertySet1 = visPropertySet1.Parent
+
+Dim bSTR2 As String
+bSTR2 = visPropertySet1.Name
+
+Dim bSTR3 As String
+bSTR3 = visPropertySet1.Name
+
+visPropertySet1.SetShow 1
+
+selection1.Clear
+
+Loop
+
+End Sub

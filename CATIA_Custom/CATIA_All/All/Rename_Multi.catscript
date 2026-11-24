@@ -1,0 +1,39 @@
+'option explicit
+Sub CATMain()
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+Dim sel as Selection
+Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+
+Dim i as integer
+i = 1
+
+For i = 1 to sel.Count
+
+set prod1=sel.Item(i).Value
+
+Dim fullpath as string
+fullpath = prod1.ReferenceProduct.Parent.FullName
+
+Dim filename as String
+filename = prod1.ReferenceProduct.Parent.Name
+filename = Replace(filename,".CATPart","")
+filename = Replace(filename,".CATProduct","")
+Dim partno as string
+partno = prod1.ReferenceProduct.PartNumber
+Dim instname as string
+instname = prod1.name
+
+prod1.ReferenceProduct.PartNumber = filename
+prod1.name = filename + ".1"
+
+
+Next
+
+End Sub

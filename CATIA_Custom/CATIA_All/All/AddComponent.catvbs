@@ -1,0 +1,15 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Set productDocument1 = CATIA.ActiveDocument
+
+Set product1 = productDocument1.Product
+
+Set products1 = product1.Products
+
+Dim arrayOfVariantOfBSTR1(0)
+arrayOfVariantOfBSTR1(0) = "C:\Users\vsguddanti\Desktop\ZB_SEITE_AU_LI_SELBST_ERSTELLT.3dxml"
+products1.AddComponentsFromFiles arrayOfVariantOfBSTR1, "All"
+
+End Sub

@@ -1,0 +1,69 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Dim documents1 As Documents
+Set documents1 = CATIA.Documents
+
+Dim productDocument1 As Document
+Set productDocument1 = documents1.Open("V:\VW310_ST\3D FINISH\3825_New\28-15D 419645\28-38H911641\28-38H_911641______________________A00_AUFLAGE.CATProduct")
+
+Dim specsAndGeomWindow1 As Window
+Set specsAndGeomWindow1 = CATIA.ActiveWindow
+
+Dim viewer3D1 As Viewer
+Set viewer3D1 = specsAndGeomWindow1.ActiveViewer
+
+Dim viewpoint3D1 As Viewpoint3D
+Set viewpoint3D1 = viewer3D1.Viewpoint3D
+
+Dim partDocument1 As Document
+Set partDocument1 = CATIA.ActiveDocument
+
+Dim selection1 As Selection
+Set selection1 = partDocument1.Selection
+
+selection1.Clear 
+
+Dim part1 As Part
+Set part1 = partDocument1.Part
+
+Dim parameters1 As Parameters
+Set parameters1 = part1.Parameters
+
+Dim hybridShapeLineExplicit1 As Parameter
+Set hybridShapeLineExplicit1 = parameters1.Item("Schnitt_Offset_116")
+
+selection1.Add hybridShapeLineExplicit1
+
+Dim parameters2 As Parameters
+Set parameters2 = part1.Parameters
+
+Dim hybridShapeLineExplicit2 As Parameter
+Set hybridShapeLineExplicit2 = parameters2.Item("Schnitt_Bauteilflaeche_116")
+
+selection1.Add hybridShapeLineExplicit2
+
+Dim parameters3 As Parameters
+Set parameters3 = part1.Parameters
+
+Dim hybridShapePointExplicit1 As Parameter
+Set hybridShapePointExplicit1 = parameters3.Item("Point.2")
+
+selection1.Add hybridShapePointExplicit1
+
+Dim parameters4 As Parameters
+Set parameters4 = part1.Parameters
+
+Dim hybridShapePointExplicit2 As Parameter
+Set hybridShapePointExplicit2 = parameters4.Item("Point.1")
+
+selection1.Add hybridShapePointExplicit2
+
+selection1.Delete 
+
+Set partDocument1 = CATIA.ActiveDocument
+
+partDocument1.SaveAs "V:\VW310_ST\3D FINISH\3825_New\ST3825_AllCATParts\28-38H_911641______________________A00_AUFLAGE.CATPart"
+
+End Sub

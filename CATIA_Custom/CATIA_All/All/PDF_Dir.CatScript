@@ -1,0 +1,52 @@
+Language="VBSCRIPT"
+Sub CATMain()
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Set objFile = objFSO.OpenTextFile("C:\Users\vsguddanti\Desktop\Path.txt", 1)
+
+Do While objFile.AtEndOfStream = False
+strLine = objFile.ReadLine
+
+dim path as string
+
+path = Replace(strLine,"""","")
+Set documents1 = CATIA.Documents
+Set drawingDocument1 = documents1.Open(path)
+
+
+
+Dim path1 as String
+path1 = CATIA.ActiveDocument.Name
+
+dim Acdoc as string
+Acdoc = replace(path1,"CATDrawing","pdf")
+Dim objShell
+Dim strPath
+Set objShell = CreateObject("Wscript.Shell")
+strPath = objShell.SpecialFolders("Desktop")
+dim dir
+DIR = strPath + "\pdf\" + Acdoc
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+  
+exists = objFSO.FolderExists(strPath + "\pdf")
+
+if (exists) then 
+   
+drawingDocument1.ExportData dir, "pdf"
+
+else
+
+'msgbox("Dir not found.")
+Set objFolder = objFSO.CreateFolder(strPath + "\pdf")
+   
+drawingDocument1.ExportData dir, "pdf"   
+   
+end if
+
+drawingDocument1.Close
+
+Loop
+REM objFile.Close
+
+End Sub

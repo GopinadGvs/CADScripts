@@ -1,0 +1,43 @@
+Language="VBSCRIPT"
+Sub CATMain()
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Set objFile = objFSO.OpenTextFile("C:\Users\mchellachamy\Desktop\Path.txt", 1)
+Set objFile1 = objFSO.OpenTextFile("C:\Users\mchellachamy\Desktop\LH.txt", 1)
+Set objFile2 = objFSO.OpenTextFile("C:\Users\mchellachamy\Desktop\RH.txt", 1)
+
+Do While objFile.AtEndOfStream = False
+strLine = objFile.ReadLine
+strLine1 = objFile1.ReadLine
+strLine2 = objFile2.ReadLine
+
+REM msgbox(strLine)
+REM msgbox(strLine1)
+REM msgbox(strLine2)
+
+dim path as string
+
+path = Replace(strLine,"""","")
+Set documents1 = CATIA.Documents
+Set drawingDocument1 = documents1.Open(path)
+
+
+Set drawingDocument1 = CATIA.ActiveDocument
+
+Set parameters4 = drawingDocument1.Parameters
+
+Set strParam4 = parameters4.Item("Betriebsmittel_Nr_1")
+
+strParam4.Value = strLine1
+
+Set parameters5 = drawingDocument1.Parameters
+Set strParam5 = parameters5.Item("Betriebsmittel_Nr_2")
+
+strParam5.Value = strLine2
+
+drawingDocument1.Save 
+
+Loop
+REM objFile.Close
+
+End Sub

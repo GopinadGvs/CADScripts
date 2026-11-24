@@ -1,0 +1,75 @@
+'option explicit
+Sub CATMain()
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+Dim sel as Selection
+Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+
+Dim i as integer
+i = 1
+
+For i = 1 to sel.Count
+
+
+set prod1=sel.Item(i).Value
+
+
+Dim filename as String
+filename = prod1.ReferenceProduct.Parent.Name
+
+dim fil1 as string
+fil1 = Replace(filename,".CATPart","")
+
+Set documents1 = CATIA.Documents
+
+Set partDocument1 = documents1.Item(filename)
+
+Set part1 = partDocument1.Part
+
+Set parameters1 = part1.Parameters
+
+Set strParam1 = parameters1.Item(fil1 + "\Stueckliste\Anzahl")
+
+strParam1.Value = "1"
+
+Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Anzahl_spiegelbildlich")
+
+strParam1.Value = "1"
+
+dim fil2 as string
+fil2 = cint(mid(fil1,23,4))
+
+Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Positionsnummer")
+
+strParam1.Value = fil2
+
+dim fil3 as string
+fil3 = mid(fil1,40,len(fil1)-39)
+
+dim fil4 as string
+fil4 = mid(fil3,1,1)
+
+fil4 = fil4 + Lcase(mid(fil1,41,len(fil1)-39))
+
+
+Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Produktbezeichnung")
+
+strParam1.Value = fil4
+
+REM Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Werkstoff_Benennung")
+
+REM strParam1.Value = "S235JRG2"
+
+Set strParam1 = parameters1.Item(fil1 +"\Spiegelbildlich")
+
+strParam1.Value = "Ja"
+
+Next
+
+End Sub

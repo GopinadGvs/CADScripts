@@ -1,0 +1,610 @@
+'Program By GopinadhGvs Dt. 22-12-2017
+'To get predefined product parameters to Excel Sheet
+
+'Updated to get Nomenclature, thickness & stock on Dt. 23-01-2018
+'Updated to get Rohmass, cyan(diameter/thickness), Arcs, Konstruktionselemente & flamecut status on Dt. 6-2-2018 by Smakkuva
+
+
+Language = "VBSCRIPT"
+
+
+Dim iprods As Integer
+Dim wahl As Integer
+Dim sp As Integer
+Dim creat As Integer
+creat = 0
+wahl = 0
+sp = 0
+Dim prods(5000)
+
+
+Sub prodall(ByVal child)
+    Dim children    As Products
+    Dim i           As Integer
+    
+    If child.Products.Count > 0 Then
+        iprods = iprods + 1
+        Set prods(iprods) = child
+        Set children = child.Products
+        For i = 1 To children.Count
+            prodall children.Item(i)
+        Next
+    Else
+      iprods = iprods + 1
+      Set prods(iprods) = child
+    End If
+
+End Sub
+
+
+Sub CATMain()
+
+    Dim doc                 As Document
+    Dim root                As Product
+    Dim children            As Products
+    Dim i                   As Integer
+	Dim reffeld(5000)       As String
+	
+	ierr1 = 0
+    Set doc = CATIA.ActiveDocument
+    Set root = doc.Product
+    strdir = ""
+    
+    iprods = 0
+    Call prodall(root)
+	
+	
+	Dim objShell
+	Dim strPath
+	Set objShell = CreateObject("Wscript.Shell")
+	strPath = objShell.SpecialFolders("Desktop")
+	
+	Dim selection1 As Selection
+	Set selection1 = CATIA.ActiveDocument.Selection
+	
+	
+	strFilePath = strPath & "\Parameters.csv"
+	
+	On Error Resume Next
+	Set obj = CreateObject("Scripting.FileSystemObject")
+	obj.DeleteFile(strFilePath)
+	on Error goto 0
+	
+	Set objFSO = CreateObject("Scripting.FileSystemObject")
+	Set objStream = objFSO.OpenTextFile(strFilePath, 8, True, 0)
+	objStream.WriteLine("Part,Anzal,Spiegelbild,Position,Product,Werkstoff,Spiegelbildlich,Pad Name,Thickness,Stock,Cyan,N.o of Arcs,Rohmass,Konstruktionselemente,Flamecut")
+	
+
+    'MsgBox "iprods: " & iprods
+
+    For i = 1 To iprods  ' partnamen auf arbeitsfeld speichern	
+
+	
+	REM set prod1=sel.Item(i).Value
+
+
+	Dim filename as String
+	filename = prods(i).ReferenceProduct.Parent.Name
+	
+	
+	dim typ as integer
+	
+	typ = InStr(1,filename,".CATProduct",1)
+	
+	dim sci as integer
+	sci = InStr(1,filename,"0000",1)
+	
+	
+	'msgbox(sci)
+	'msgbox(prods(i).ReferenceProduct.Parent.Name)
+	
+	
+	On Error Resume Next
+	
+	'no Adapter/Open Position/Screws
+	
+	if(sci = 0) then
+	
+	
+	if (typ > 1) then
+	
+	'msgbox("Product")
+	
+	dim fil1 as string
+	
+	fil1 = Replace(filename,".CATProduct","")
+	
+
+	Set documents1 = CATIA.Documents
+
+	Set productDocument1 = documents1.Item(filename)
+	Set product1 = productDocument1.Product	
+	
+	Set product1 = product1.ReferenceProduct
+
+	Set parameters1 = product1.Parameters	
+
+	'_____
+	
+	
+	dim xcel as string
+	xcel = ""
+
+	Set strParam1 = parameters1.Item(fil1 + "\Stueckliste\Anzahl")
+
+	REM msgbox  "Anzahl " & strParam1.Value
+	xcel =  strParam1.Value
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Anzahl_spiegelbildlich")
+
+	REM msgbox  "Anzahl_spiegelbildlich " & strParam1.Value
+	xcel = xcel & ","  & strParam1.Value
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Positionsnummer")
+
+	REM msgbox  "Positionsnummer " & strParam1.Value
+	xcel =  xcel & "," & strParam1.Value
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Produktbezeichnung")
+
+	REM msgbox  "Produktbezeichnung " & strParam1.Value
+	xcel =   xcel & "," & strParam1.Value
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Werkstoff_Benennung")
+	
+	REM msgbox  "Werkstoff_Benennung " & strParam1.Value
+	xcel = xcel & "," & strParam1.Value
+	
+	Set strParam1 = parameters1.Item(fil1 +"\Spiegelbildlich")
+
+	REM msgbox  "Werkstoff_Benennung " & strParam1.Value
+	xcel = xcel & "," & strParam1.Value
+	
+	'____________________
+	
+	Set oBodies = partDocument1.Part.Bodies
+	Dim j As Integer
+	For j = 1 to oBodies.Count
+	if oBodies.Item(j).Name = "PartBody" then
+	Dim oPartBody As AnyObject
+	Set oPartBody = partDocument1.Part.Bodies.Item("Funktionsteil")
+	Dim oShapes As Shapes
+	Set oShapes = oPartBody.Shapes
+	if (oShapes.Count <> 0) then
+	Dim Pad2 As AnyObject
+	On Error Resume Next
+	Set Pad2 = oPartBody.Shapes.Item(1)
+	xcel = xcel & "," & Pad2.Name
+	'msgbox(Pad2.Name)
+	
+	else
+	'msgbox "no shapes"
+	end if
+	end if
+	next
+
+On Error goto 0
+	
+	REM msgbox(fil1 & "," & xcel)
+	objStream.WriteLine(prods(i).Name & "," & xcel)
+	
+	'msgbox(prods(i).Name)
+	
+	xcel = ""
+
+	REM objStream.WriteLine (prods(i).ReferenceProduct.PartNumber)	
+	
+	else	
+	
+	
+	fil1 = Replace(filename,".CATPart","")	
+
+	Set documents1 = CATIA.Documents
+
+	Set partDocument1 = documents1.Item(filename)
+
+	Set part1 = partDocument1.Part
+
+	Set parameters1 = part1.Parameters
+
+	'___________________
+	
+	'dim xcel as string
+
+	Set strParam1 = parameters1.Item(fil1 + "\Stueckliste\Anzahl")
+
+	REM msgbox  "Anzahl " & strParam1.Value
+	xcel =  strParam1.Value
+	
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Anzahl_spiegelbildlich")
+
+	REM msgbox  "Anzahl_spiegelbildlich " & strParam1.Value
+	xcel = xcel & ","  & strParam1.Value
+	
+
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Positionsnummer")
+
+	REM msgbox  "Positionsnummer " & strParam1.Value
+	xcel =  xcel & "," & strParam1.Value
+
+	
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Produktbezeichnung")
+
+	REM msgbox  "Produktbezeichnung " & strParam1.Value
+	xcel =   xcel & "," & strParam1.Value
+	
+	Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Werkstoff_Benennung")
+
+	REM msgbox  "Werkstoff_Benennung " & strParam1.Value
+	
+	dim mat as string
+	
+	mat = Replace(strParam1.value, ",",".")
+	
+	xcel = xcel & "," & mat
+	
+
+	Set strParam1 = parameters1.Item(fil1 +"\Spiegelbildlich")
+
+	REM msgbox  "Werkstoff_Benennung " & strParam1.Value
+	
+	
+	xcel = xcel & "," & strParam1.Value
+	
+	
+	'end if
+	
+	
+	REM Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Rohmass")
+
+	REM REM msgbox  "Werkstoff_Benennung " & strParam1.Value
+	REM xcel = xcel & "," & strParam1.Value
+	
+	Set oBodies = partDocument1.Part.Bodies
+	'Dim j As Integer
+	For j = 1 to oBodies.Count
+	if oBodies.Item(j).Name = "PartBody" then
+	'Dim oPartBody As AnyObject
+	Set oPartBody = partDocument1.Part.Bodies.Item("Funktionsteil")
+	'Dim oShapes As Shapes
+	Set oShapes = oPartBody.Shapes
+	if (oShapes.Count <> 0) then
+	'Dim Pad2 As AnyObject
+	
+	Set Pad2 = oPartBody.Shapes.Item(1)
+	xcel = xcel & "," & Pad2.Name
+	
+	On Error Resume Next
+	
+	'else if (oShapes.Count = 0) then
+	
+	'xcel = xcel & "," & "-"
+	
+		
+		dim thk1 as double
+		thk1 = oPartBody.Shapes.Item(1).FirstLimit.Dimension.Value
+
+		dim thk2 as double
+		thk2 = oPartBody.Shapes.Item(1).SecondLimit.Dimension.Value
+
+		dim thk3 as double
+		thk3 = thk1 + thk2
+		
+		xcel = xcel & "," & thk3
+		'msgbox(thk3)
+
+		Set sketches1 = oPartBody.Sketches
+
+		Set sketch1 = sketches1.Item(1)
+
+		Set constraints1 = sketch1.Constraints
+
+		dim stk as string
+
+		stk = ""
+		
+		dim stk2 as string
+
+		stk2 = ""
+		
+		dim stk3 as string
+
+		stk3 = ""
+		
+		dim stk4 as integer
+
+		stk4 = ""
+		
+		dim stock as string
+
+		stock = ""
+		
+		dim Cyan as string
+
+		cyan = ""
+		
+		Dim p as integer
+		P= 0
+		
+		
+		For ik = 1 To constraints1.Count
+		'msgbox(constraints1.Item(ik).Name)
+		'msgbox(constraints1.Item(ik).Type)
+
+		If (constraints1.Item(ik).Type = 5 or constraints1.Item(ik).Type = 1 or constraints1.Item(ik).Type = 14 ) Then
+
+		selection1.Clear
+		selection1.Add constraints1.Item(ik)
+
+		Set visPropertySet1 = selection1.VisProperties
+
+		Dim r, g, b
+
+		r = CLng(0)
+		g = CLng(0)
+		b = CLng(0)
+
+		visPropertySet1.GetRealColor r, g, b
+			
+		'MsgBox "r = " & r & "  g = " & g & "  b = " & b
+
+		'If (r = 0 And g = 255 And b = 255) Then
+		
+		If (r = 255 And g = 255 And b = 0) Then
+
+		'msgbox(constraints1.Item(ik).Dimension.Value)
+		
+		stk = stk & "X" & constraints1.Item(ik).Dimension.Value
+		
+		
+		else If (r = 0 And g = 255 And b = 255) Then
+	
+			if (constraints1.Item(ik).Type = 14) Then
+
+		
+			stk2 = stk2 & "X" & constraints1.Item(ik).Dimension.Value * 2
+		
+	
+			else if (constraints1.Item(ik).Type = 1 or constraints1.Item(ik).Type = 5 ) Then
+
+			stk3 = stk3 & "X" & constraints1.Item(ik).Dimension.Value
+		
+	
+		
+		'msgbox(stk)
+
+			End If
+			End If
+		
+		
+		else 
+
+		if (constraints1.Item(ik).Type = 14 ) Then
+		
+				p = p+1
+		
+		end if
+		end if
+		
+		'End If
+	
+		End If
+		End If
+		
+		REM else
+		 
+		REM stk4 = stk4 & "-"
+		
+		'End I
+		
+		Next
+		
+		'msgbox "Total arcs= " & p
+		
+		stock = ""
+		
+		stock = stock & thk3 & stk
+	
+		xcel = xcel & "," & stock
+		
+		stk = ""
+		
+		thk3 = ""
+		
+		stock = ""
+		
+		
+		'Next
+		
+		xcel = xcel & "," & stk2 & stk3
+		
+		stk2 = ""
+		
+		stk3 = ""
+		
+		thk3 = ""
+		
+		stock = ""
+		
+		
+		'xcel = xcel & "," & stk4
+		
+		xcel = xcel & "," & p
+		
+		
+	On Error goto 0
+
+	else
+	'msgbox "no shapes"
+	end if
+	
+		thk3 = ""
+		
+		stock = ""
+		
+	end if
+	
+		thk3 = ""
+		
+		stock = ""
+		
+		stk4 = ""
+		
+		'p= ""
+	'end if
+
+	next	
+	
+	'xcel = ""
+	
+On error resume next	
+
+Set strParam1 = parameters1.Item(fil1 +"\Stueckliste\Rohmass")
+
+	REM msgbox  "Werkstoff_Benennung " & strParam1.Value
+	xcel = xcel & "," & strParam1.Value
+	
+	
+	Set hybridBodies1 = part1.HybridBodies
+
+	Dim k As Integer
+	For k = 1 to hybridBodies1.count
+
+	Dim hybridBody1 As HybridBody
+
+	if hybridBodies1.Item(k).Name = "Konstruktionselemente" then
+	
+	Dim Body As HybridBody
+    Set Body = hybridBodies1.item(k)
+
+	Dim kshapes As Integer
+	
+	kshapes = ""
+	
+	kShapes = Body.hybridshapes.count+Body.hybridbodies.count+Body.hybridsketches.count
+	
+	'msgbox "Total Elements = " & kShapes	
+	
+	xcel = xcel & "," & kShapes
+	
+	kshapes = ""
+	
+	end if
+
+next
+
+set oBodies = partDocument1.Part.Bodies
+	
+	Dim l As Integer
+	For l = 1 to oBodies.Count
+	
+	if oBodies.Item(l).Name = "PartBody" then
+	
+	Dim Body1 As AnyObject
+	Set Body1 = partDocument1.Part.Bodies.Item("Funktionsteil")
+	
+	Dim shapes1 As Shapes
+	Set shapes1 = Body1.Shapes
+
+	Dim sum As integer
+	sum = 0
+			
+	For m = 1 to shapes1.Count
+			
+	If Instr(1, shapes1.Item(m).name, "Edgefillet", vbTextCompare) > 0 then
+
+	Dim edge As integer
+			
+	edge = shapes1.Item(m).objectstofillet.count
+
+	sum = sum+edge
+	
+	end if	
+
+	next
+
+	'msgbox "Total edgefillet objects = " & sum
+
+	if (sum > 3 or P>= 1)then
+
+
+	'msgbox "Flame cut exists - total edge fillets = " & sum
+	xcel = xcel & "," & "yes" & "-"  & sum & "-"  &p
+	
+	else if sum <= 3 then
+
+	xcel = xcel & "," & "No" & "-" & sum & "-"  &p
+	
+	'else 
+	
+	'xcel = xcel & ","  & "-"
+
+	end if
+	
+	end if
+	
+	end if
+	
+	
+	next
+	
+	
+On Error goto 0
+	
+	
+	REM msgbox(fil1 & "," & xcel)
+	'objStream.WriteLine(prods(i).Name & "," &  prods(i).Nomenclature & "," & xcel)
+	
+	'If Instr (1, xcel, Vbtextcomapre) >1 then
+	
+	objStream.WriteLine(prods(i).Name & "," & xcel)
+	
+	xcel = ""
+	
+	'else 
+	
+	'objStream.WriteLine(prods(i).Name & "," & "-")
+	
+	'end if
+		
+	'objStream.WriteLine (prods(i).ReferenceProduct.PartNumber)	
+	
+	
+	end if	
+	
+	
+	'no Adapter/Open Position/Screws
+	end if	
+	
+	If Err.Number = 0 Then
+	
+	'msgbox(prods(i).ReferenceProduct.PartNumber)
+	
+	xcel = ""
+	
+	end if
+	
+	
+	REM On Error Goto 0
+	
+	REM xcel = ""
+	
+	'objStream.WriteLine (prods(i).ReferenceProduct.PartNumber)	
+    'reffeld(i) = prods(i).ReferenceProduct.PartNumber
+	'msgbox reffeld(i)
+		
+    Next
+	
+	'msgbox("Opening Excel Sheet..")
+	
+	dim WshShell
+	set WshShell = CreateObject("WScript.Shell")
+	REM dim strPath as string
+	REM strPath = "explorer.exe /select," & strFilePath
+	REM strPath = "explorer.exe /select," & strFilePath
+	REM WshShell.Run strPath
+	WshShell.Run strFilePath
+	
+End Sub
+
+

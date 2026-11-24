@@ -1,0 +1,28 @@
+Sub CATMain()
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+Dim sel as Selection
+Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+
+msgbox(sel.Item(0).Value.Name)
+
+'set prod1=sel.FindObject("")
+Dim path as String
+'path = prod1.ReferenceProduct.Parent.FullName
+path = prod1.ReferenceProduct.Parent.Name
+path = Replace(path,".CATPart","")
+path = Replace(path,".CATProduct","")
+dim strPath as string
+Set WshShell = CreateObject("WScript.Shell")
+Set oExec = WshShell.Exec("clip")
+Set oWrite = oExec.stdIn
+oWrite.WriteLine path
+oWrite.Close
+
+End Sub

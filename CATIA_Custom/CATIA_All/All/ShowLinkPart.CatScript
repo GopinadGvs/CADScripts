@@ -1,0 +1,26 @@
+Sub CATMain()
+
+Dim drawingDocument1 As Document
+Set drawingDocument1 = CATIA.ActiveDocument
+
+Dim drawingSheets1 As DrawingSheets
+Set drawingSheets1 = drawingDocument1.Sheets
+
+Dim drawingSheet1 As DrawingSheet
+Set drawingSheet1 = drawingSheets1.ActiveSheet
+
+Dim drawingViews1 As DrawingViews
+Set drawingViews1 = drawingSheet1.Views
+
+Dim drawingView1 As DrawingView
+Set drawingView1 = drawingViews1.ActiveView
+
+drawingView1.Activate
+
+Dim FullName
+FullName =  drawingView1.GenerativeBehavior.document.ReferenceProduct.Parent.Fullname
+
+Dim Box, Speicher As Long
+MsgBox "Path and File:" & Chr (13) & Chr (10)  &  FullName  ,64, "LINKED TO"
+
+End Sub

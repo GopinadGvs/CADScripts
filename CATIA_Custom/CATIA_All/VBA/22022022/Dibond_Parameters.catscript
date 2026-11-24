@@ -1,0 +1,63 @@
+'Program By GopinadhGvs Dt. 23-11-2018
+'To Add parameters of Selected Parts
+'Program By GopinadhGvs _A01_ Dt. 26-11-2021_
+
+'option explicit
+Sub CATMain()
+dim WshShell
+set WshShell = CreateObject("WScript.Shell")
+dim objFSO
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Dim partDoc1 as PartDocument
+Set partDoc1 = CATIA.ActiveDocument
+
+Dim sel as Selection
+Dim prod1 as Document
+set sel=CATIA.ActiveDocument.Selection
+
+Dim i as integer
+i = 1
+
+For i = 1 to sel.Count
+
+
+set prod1=sel.Item(i).Value
+
+
+Dim filename as String
+filename = prod1.ReferenceProduct.Parent.Name
+
+dim fil1 as string
+fil1 = Replace(filename,".CATPart","")
+
+Set documents1 = CATIA.Documents
+
+Set partDocument1 = documents1.Item(filename)
+
+Dim oRootProduct As Product
+Set oRootProduct = partDocument1.Product
+oRootProduct.Source = catProductBought
+oRootProduct.DescriptionRef = "Platinweiß"
+
+Set part1 = partDocument1.Part
+
+Set parameters1 = part1.Parameters
+
+
+Set strParam1 = parameters1.Item("standard")
+strParam1.Value = "Fa.thyssenkrupp-plastics"
+
+Set strParam1 = parameters1.Item("MATERIAL")
+
+Dim enumValues() As Variant
+ReDim enumValues(strParam1.GetEnumerateValuesSize() - 1)
+strParam1.GetEnumerateValues (enumValues)
+ReDim Preserve enumValues(UBound(enumValues) + 1)
+enumValues(UBound(enumValues)) = "EN AW-5005A(ALMG1),H44,nach EN 485-2"
+strParam1.SetEnumerateValues (enumValues)
+strParam1.Value = "EN AW-5005A(ALMG1),H44,nach EN 485-2"
+
+
+Next
+
+End Sub

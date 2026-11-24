@@ -1,0 +1,18 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Dim productDocument1 As Document
+Set productDocument1 = CATIA.ActiveDocument
+
+Dim selection1 As Selection
+Set selection1 = productDocument1.Selection
+
+dim s as string
+s = inputbox("Enter Position Number:")
+
+selection1.Search "Name=*_" & s & "_*,all"
+
+'selection1.Search "Name=*_0007_*,all"
+
+End Sub

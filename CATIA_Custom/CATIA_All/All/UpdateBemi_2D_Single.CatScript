@@ -1,0 +1,19 @@
+Language="VBSCRIPT"
+
+Sub CATMain()
+
+Set drawingDocument1 = CATIA.ActiveDocument
+
+Set parameters4 = drawingDocument1.Parameters
+
+Set strParam4 = parameters4.Item("Betriebsmittel_Nr_1")
+
+strParam4.Value = "28-38H 911641"
+
+Set parameters5 = drawingDocument1.Parameters
+Set strParam5 = parameters5.Item("Betriebsmittel_Nr_2")
+
+strParam5.Value = "28-38H 911642"
+
+
+End Sub

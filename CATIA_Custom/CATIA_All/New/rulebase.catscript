@@ -1,0 +1,51 @@
+Option Explicit
+' COPYRIGHT DASSAULT SYSTEMES 2001
+Dim Language as String
+Language="VBScript"
+
+Sub CATMain()
+' Set the CATIA popup file alerts to False
+' It prevents to stop the macro at each alert during its execution
+CATIA.DisplayFileAlerts = False
+
+Dim oActiveDoc As Document 
+Set oActiveDoc = CATIA.ActiveDocument 
+ 
+' Check whether the document is a CATPart
+If (InStr(oActiveDoc.Name,".CATPart")) <> 0  Then 
+
+    ' Retrieve the collection object which contains
+    ' all the document relations.
+    ' The statements below are only valid when the active
+    ' document is a CATPart
+    Dim oRelations As Relations
+    Set oRelations = oActiveDoc.Part.Relations
+
+    ' Create the rule below:
+    '           if PartBody\Hole.1\Diameter > 10mm
+    '           Message The hole diameter is , PartBody\Hole.1\Diameter)
+    Dim Rule0 As Rule
+    Set Rule0 = oRelations.CreateProgram("Rule.1",_
+                                         "", "" +_
+                                         chr(10)_
+                                         + "if PartBody\Hole.1\Diameter > 10mm" +_
+                                         chr(10) +_
+                     "Message (""The hole diameter is # "", PartBody\Hole.1\Diameter)" ) 
+
+    ' Create the check below:
+    '       PartBody\Pad.1\FirstLimit\Length  > 100mm
+    Dim Check1 As Check
+    Set Check1 = oRelations.CreateCheck  ( "Check.1", "Increase the pad thickness",_
+                                           "/* Check created by CRE 03/16/00 */" +_
+                                chr(10) + "PartBody\Pad.1\FirstLimit\Length  > 100mm" ) 
+
+' Update the document
+CATIA.ActiveDocument.Part.Update 
+else 
+   MsgBox "The active document must be a CATPart"
+End If
+
+
+
+End Sub
+
